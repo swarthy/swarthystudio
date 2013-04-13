@@ -7,127 +7,83 @@ namespace SwarthyStudio
 {
     static class SyntaxAnalyzer
     {        
-        private static List<Token> tokens;
-        static int pos;
-        public static List<int> variables = new List<int>();
-        static bool[,] TransitionTable = new bool[14,14];
+        private static List<Token> tokens;        
+        public static List<int> variables = new List<int>();        
         public static Visibility currentVisibility = null;
+        static SyntaxTree Tree;
         static public void Initialize()
         {
-            pos = -1;
-            InitTable();
+            
         }
-        static void InitTable()
-        {
-            TransitionTable[(int)TokenType.Identifier, (int)TokenType.Operation] = true;
-            TransitionTable[(int)TokenType.Number, (int)TokenType.Operation] = true;
-            TransitionTable[(int)TokenType.Identifier, (int)TokenType.CloseBracket] = true;
-            TransitionTable[(int)TokenType.Number, (int)TokenType.CloseBracket] = true;
-            TransitionTable[(int)TokenType.Operation, (int)TokenType.Number] = true;
-            TransitionTable[(int)TokenType.Operation, (int)TokenType.Identifier] = true;
-            TransitionTable[(int)TokenType.Operation, (int)TokenType.OpenBracket] = true;
-            TransitionTable[(int)TokenType.OpenBracket, (int)TokenType.OpenBracket] = true;
-            TransitionTable[(int)TokenType.OpenBracket, (int)TokenType.Number] = true;
-            TransitionTable[(int)TokenType.OpenBracket, (int)TokenType.Identifier] = true;
-            TransitionTable[(int)TokenType.CloseBracket, (int)TokenType.CloseBracket] = true;
-            TransitionTable[(int)TokenType.CloseBracket, (int)TokenType.Operation] = true;
-        }
+        
         public static void Process()
         {
             tokens = LexicalAnalyzer.Lexems;
-            pos = 0;
             currentVisibility = null;
+            Tree = new SyntaxTree();
             variables.Clear();
-            Stmt();      
+            Statement(Tree);
         }
-        static void Stmt()
+        static void Statement(SyntaxTree parentTree)
         {
-            if (tokens[pos++].Type != TokenType.OpenCurlyBracket)
-                throw new ErrorException("Фрагмент кода должен начинаться с \'{\'",tokens[pos-1], ErrorType.SyntaxError);            
+            SyntaxTree current = new SyntaxTree();
+            parentTree.Add(current);
+
+            Eat(TokenType.OpenCurlyBracket);          
             new Visibility();
-            do
+            while(Peek().Type!=TokenType.CloseCurlyBracket)
             {
-                switch (tokens[pos++].Type)
+                Token t = Get();
+                switch (t.Type)
                 {
                     case TokenType.Identifier:
-                        currentVisibility.FindOrCreate(tokens[pos - 1].Value, 0);
-                        //tokens[pos-1].Value
-                        //проверить объявленность переменной
-                        Assignment();                        
+                        currentVisibility.FindOrCreate(t.Value, 0);   
+                        //ArithmeticExpression();               
                         break;
                     case TokenType.If:
-                        If();
-                        break;
-                    case TokenType.CloseCurlyBracket:
-                        currentVisibility = currentVisibility.parentVisibility;
-                        return;
+                        //If();
                         break;
                     case TokenType.Number:
-                        throw new ErrorException("Ожидается присвоение константе: " + tokens[pos - 1].Value, tokens[pos - 1], ErrorType.SyntaxError);
+                        throw new ErrorException("Невозможно присвоить значение константе: " + t.Value, t, ErrorType.SyntaxError);
                         return;
                         break;
                     default:
-                        throw new ErrorException("Неожиданный символStmt: " + tokens[pos - 1].Value, tokens[pos - 1], ErrorType.SyntaxError);
+                        throw new ErrorException("Неожиданный символStmt: " + t.Value, t, ErrorType.SyntaxError);
                 }
-            } while (true);
+            }            
+            Eat(TokenType.CloseCurlyBracket);// }
+            currentVisibility = currentVisibility.parentVisibility;//возвращаемся в родительскую область видимости
         }
-        static void Assignment()
-        {
-            if (tokens[pos++].Type != TokenType.Assign)
-                throw new ErrorException("Ожидался знак \'=\'", tokens[pos - 1], ErrorType.SyntaxError);
-            Expression();
-        }
-        static void Expression()
-        {
-            Token prev = tokens[pos++], current=tokens[pos++];
-            if (prev.Type!=TokenType.OpenBracket && prev.Type!=TokenType.Identifier && prev.Type!=TokenType.Number)
-                throw new ErrorException("Неожиданный символExp1: " + prev.Value, prev, ErrorType.SyntaxError);             
-            while (TransitionTable[(int)prev.Type, (int)current.Type])
-            {
-                //проверка на объявленность
-                DeclarationCheck(current);                   
-                
-                prev = current;                 
-                current = tokens[pos++];
-            }
-            if (current.Type != TokenType.Delimitier)
-                throw new ErrorException("Неожиданный символExp2: " + current.Value, current, ErrorType.SyntaxError);            
-            if (prev.Type!=TokenType.Identifier &&prev.Type!=TokenType.Number &&prev.Type!=TokenType.CloseBracket)
-                throw new ErrorException("Неожиданный символExp3: " + prev.Value, prev, ErrorType.SyntaxError);            
-        }
+
         static void If()
         {
-            if (tokens[pos++].Type != TokenType.OpenBracket)
-                throw new ErrorException("После if предполагается \'(\'", tokens[pos - 1], ErrorType.SyntaxError);            
-            LogicStmt();
-            if (tokens[pos++].Type != TokenType.CloseBracket)
-                throw new ErrorException("После логического выражения предполагается \')\'", tokens[pos - 1], ErrorType.SyntaxError);
-            Stmt();
-            if (tokens[pos].Type == TokenType.Else)
-            {
-                pos++;
-                Stmt();
-            }
-        }
-        static void LogicStmt()
-        {
-            if (tokens[pos++].Type != TokenType.Identifier && tokens[pos-1].Type != TokenType.Number)
-                throw new ErrorException("Первый аргумент логического выражения должен быть идентификатором или константой", tokens[pos - 1], ErrorType.SyntaxError);
-            if (tokens[pos-1].Type == TokenType.Identifier && currentVisibility.Find(tokens[pos - 1].Value) == null)
-                throw new ErrorException("Использование ранее необъявленной переменной", tokens[pos - 1], ErrorType.SyntaxError); 
 
-            if (tokens[pos++].Type != TokenType.Compare)
-                throw new ErrorException("Ожидалась операция сравнения", tokens[pos - 1], ErrorType.SyntaxError);
-
-            if (tokens[pos++].Type != TokenType.Identifier && tokens[pos-1].Type != TokenType.Number)
-                throw new ErrorException("Второй аргумент логического выражения должен быть идентификатором или константой", tokens[pos - 1], ErrorType.SyntaxError);
-            if (tokens[pos-1].Type == TokenType.Identifier && currentVisibility.Find(tokens[pos - 1].Value) == null)
-                throw new ErrorException("Использование ранее необъявленной переменной", tokens[pos - 1], ErrorType.SyntaxError); 
         }
+
         static void DeclarationCheck(Token t)
         {
             if (t.Type == TokenType.Identifier && currentVisibility.Find(t.Value) == null)
                 throw new ErrorException("Использование ранее необъявленной переменной", t, ErrorType.SyntaxError); 
+        }
+        static Token Peek(int Pos = 0)
+        {
+            return tokens[Pos];
+        }
+        static Token Get()
+        {
+            Token t = Peek();
+            tokens.RemoveAt(0);
+            return t;
+        }
+        static void PutBack(Token t)
+        {
+            tokens.Insert(0, t);
+        }
+        static void Eat(TokenType type)
+        {
+            Token t = Get();
+            if (t.Type != type)
+                throw new ErrorException("Ожидаемый токен: " + type.ToString() + ", а найдено: " + t.Type.ToString(), t, ErrorType.SyntaxError);
         }
     }
     class Visibility

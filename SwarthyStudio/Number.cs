@@ -16,7 +16,7 @@ namespace SwarthyStudio
             int mul = 1;
             for (int i = str.Length - 1; i >= 0; i--)
             {
-                value += Helper.HexDigits.IndexOf(str[i]) * mul;
+                value += H.HexDigits.IndexOf(str[i]) * mul;
                 mul *= 16;
             }
         }
@@ -26,7 +26,7 @@ namespace SwarthyStudio
             int temp = 0, mul = 1;
             for (int i = str.Length - 1; i >= 0; i--)
             {
-                temp += Helper.HexDigits.IndexOf(str[i]) * mul;
+                temp += H.HexDigits.IndexOf(str[i]) * mul;
                 mul *= 16;
             }
             return temp;

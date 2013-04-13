@@ -5,13 +5,11 @@ using System.Text;
 
 namespace SwarthyStudio
 {
-    static class Helper
+    static class H
     {
         static public char Delimiter = ';';
         static public char Assign = '=';
-        static public string Operations = "+-*/";
-        //static public string HexDigits = "0123456789";
-        //static public string HexLetters = "ABCDEF";
+        static public string Operations = "+-*/";        
         static public string HexDigits = "0123456789ABCDEF";
         static public string RomeDigits = "IVXLCDM";                
         public static bool isOperation(char sym)

@@ -49,7 +49,7 @@ namespace SwarthyStudio
                     if (char.IsLetter(c) || char.IsDigit(c))
                         postEvent(Events.Symbol, c, pos, line);                    
                     else
-                        if (Helper.isOperation(c))
+                        if (H.isOperation(c))
                             postEvent(Events.Operation, c, pos, line);
                         else
                             switch (c)
@@ -129,10 +129,10 @@ namespace SwarthyStudio
         private static void AddToken(string value, TokenType type, TokenSubType subType=TokenSubType.None, int pos=0, int line=0)
         {            
             if (type == TokenType.Operation)
-                Lexems.Add(new Token(value, type, Helper.operationType(value[0]),pos,line,1));
+                Lexems.Add(new Token(value, type, H.operationType(value[0]),pos,line,1));
             else
                 if (type==TokenType.Identifier)
-                    Lexems.Add(Helper.parseIdentifier(value,pos,line));
+                    Lexems.Add(H.parseIdentifier(value,pos,line));
                 else
                     Lexems.Add(new Token(value, type, subType,pos,line,1));
             if (type == TokenType.Identifier)
@@ -322,7 +322,7 @@ namespace SwarthyStudio
         If,
         Else,
         Compare,
-        EOS
+        EOS        
     }
     #endregion
     #region События
