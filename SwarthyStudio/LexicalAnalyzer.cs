@@ -338,7 +338,7 @@ namespace SwarthyStudio
     #region Состояния
     public enum States
     {
-        Start, Identified, Number10, Number16, Operation, Assign, Delimiter, OpenBracket, CloseBracket, OpenCurlyBracket, CloseCurlyBracket
+        Start, Identified, Delimiter//, Number10, Number16, Operation, Assign, Delimiter, OpenBracket, CloseBracket, OpenCurlyBracket, CloseCurlyBracket
     }
     #endregion
 }

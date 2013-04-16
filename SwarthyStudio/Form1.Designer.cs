@@ -45,7 +45,6 @@
             this.проектToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.компиляцияToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.debugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.colorizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.dlgOpen = new System.Windows.Forms.OpenFileDialog();
             this.dlgSave = new System.Windows.Forms.SaveFileDialog();
             this.tbCode = new System.Windows.Forms.RichTextBox();
@@ -195,19 +194,11 @@
             // 
             // debugToolStripMenuItem
             // 
-            this.debugToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.colorizeToolStripMenuItem});
             this.debugToolStripMenuItem.Name = "debugToolStripMenuItem";
-            this.debugToolStripMenuItem.Size = new System.Drawing.Size(69, 20);
-            this.debugToolStripMenuItem.Text = "<debug>";
-            // 
-            // colorizeToolStripMenuItem
-            // 
-            this.colorizeToolStripMenuItem.Name = "colorizeToolStripMenuItem";
-            this.colorizeToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F4;
-            this.colorizeToolStripMenuItem.Size = new System.Drawing.Size(134, 22);
-            this.colorizeToolStripMenuItem.Text = "colorize";
-            this.colorizeToolStripMenuItem.Click += new System.EventHandler(this.colorizeToolStripMenuItem_Click);
+            this.debugToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F4;
+            this.debugToolStripMenuItem.Size = new System.Drawing.Size(83, 20);
+            this.debugToolStripMenuItem.Text = "Debug form";
+            this.debugToolStripMenuItem.Click += new System.EventHandler(this.debugToolStripMenuItem_Click);
             // 
             // dlgOpen
             // 
@@ -231,8 +222,8 @@
             this.tbCode.Name = "tbCode";
             this.tbCode.Size = new System.Drawing.Size(533, 161);
             this.tbCode.TabIndex = 3;
-            this.tbCode.Text = "{\n\ta=2A+3;\n\tif (a<b)\n\t{\n\t\tb=c+3;\n\t}\n\telse\n\t{\n\t\ta=2+b;\n\t}\n\tc=(2+2)*b;\n\td=c*(2-a)/7" +
-                ";\n}";
+            this.tbCode.Text = "{\n\ta=1+(2-3)*(4+5/(10+11));\n                b=1+1+1+1+1+1+1;\n                c=1*" +
+                "1*1*1*1*1*1;\n}";
             this.tbCode.SelectionChanged += new System.EventHandler(this.tbCode_SelectionChanged);
             this.tbCode.TextChanged += new System.EventHandler(this.tbCode_TextChanged);
             this.tbCode.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tbCode_KeyDown);
@@ -306,7 +297,6 @@
         private System.Windows.Forms.RichTextBox tbCode;
         private System.Windows.Forms.ToolStripMenuItem сохранитьКакToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem debugToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem colorizeToolStripMenuItem;
         private System.Windows.Forms.SplitContainer splitContainer1;
     }
 }

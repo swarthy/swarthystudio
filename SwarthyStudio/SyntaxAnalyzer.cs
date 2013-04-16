@@ -7,10 +7,10 @@ namespace SwarthyStudio
 {
     static class SyntaxAnalyzer
     {        
-        private static List<Token> tokens;        
-        public static List<int> variables = new List<int>();        
+        private static List<Token> tokens;
+        public static List<int> variables = new List<int>();
         public static Visibility currentVisibility = null;
-        static SyntaxTree Tree;
+        public static SyntaxTree Tree;
         static public void Initialize()
         {
             
@@ -18,7 +18,7 @@ namespace SwarthyStudio
         
         public static void Process()
         {
-            tokens = LexicalAnalyzer.Lexems;
+            tokens = LexicalAnalyzer.Lexems.ToList();//DEBUG: копируем список, в release версии - передать по ссылке
             currentVisibility = null;
             Tree = new SyntaxTree();
             variables.Clear();
@@ -26,64 +26,143 @@ namespace SwarthyStudio
         }
         static void Statement(SyntaxTree parentTree)
         {
-            SyntaxTree current = new SyntaxTree();
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Statement);
             parentTree.Add(current);
-
             Eat(TokenType.OpenCurlyBracket);          
             new Visibility();
-            while(Peek().Type!=TokenType.CloseCurlyBracket)
+            while(Peek.Type!=TokenType.CloseCurlyBracket)
             {
-                Token t = Get();
-                switch (t.Type)
+                switch (Peek.Type)
                 {
                     case TokenType.Identifier:
-                        currentVisibility.FindOrCreate(t.Value, 0);   
-                        //ArithmeticExpression();               
+                        currentVisibility.FindOrCreate(Peek.Value, 0);
+                        Assign(current);                        
                         break;
                     case TokenType.If:
-                        //If();
+                        If(current);
                         break;
                     case TokenType.Number:
-                        throw new ErrorException("Невозможно присвоить значение константе: " + t.Value, t, ErrorType.SyntaxError);
+                        throw new ErrorException("Невозможно присвоить значение константе: " + Peek.Value, Peek, ErrorType.SyntaxError);
                         return;
                         break;
                     default:
-                        throw new ErrorException("Неожиданный символStmt: " + t.Value, t, ErrorType.SyntaxError);
+                        throw new ErrorException("Неожиданный символStmt: " + Peek.Value, Peek, ErrorType.SyntaxError);
                 }
             }            
             Eat(TokenType.CloseCurlyBracket);// }
             currentVisibility = currentVisibility.parentVisibility;//возвращаемся в родительскую область видимости
         }
 
-        static void If()
+        static void If(SyntaxTree parentTree)
         {
-
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.If);
+            parentTree.Add(current);
+            current.Add(Eat(TokenType.If));
+            Eat(TokenType.OpenBracket);
+            LogicalExpression(current);
+            Eat(TokenType.CloseBracket);
+            Statement(current);
+            if (Peek.Type == TokenType.Else)
+            {
+                current.Add(Eat(TokenType.Else));
+                Statement(current);
+            }
         }
 
-        static void DeclarationCheck(Token t)
+        static void LogicalExpression(SyntaxTree parentTree)
+        {
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.LogicalExpression);
+            parentTree.Add(current);
+            current.Add(DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number)));
+            current.Add(Eat(TokenType.Compare));
+            current.Add(DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number)));
+        }
+        
+        static void Assign(SyntaxTree parentTree)
+        {
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Assign);
+            parentTree.Add(current);
+            current.Add(Eat(TokenType.Identifier));
+            current.Add(Eat(TokenType.Assign));            
+            Sum(current);
+            Eat(TokenType.Delimitier);
+        }        
+
+        static void Sum(SyntaxTree parentTree)
+        {
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Sum);
+            parentTree.Add(current);
+            Mul(current);
+            if(Peek.SubType == TokenSubType.Add)
+            {
+                current.Add(Eat(TokenType.Operation));
+                Sum(current);
+            }
+        }
+        static void Mul(SyntaxTree parentTree)
+        {
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Mul);
+            parentTree.Add(current);
+            Atom(current);
+            if(Peek.SubType == TokenSubType.Mul)
+            {
+                current.Add(Eat(TokenType.Operation));
+                Mul(current);
+            }
+        }
+        static void Atom(SyntaxTree parentTree)
+        {
+            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Atom);
+            parentTree.Add(current);
+            Token d = Get;
+            if (d.Type != TokenType.Identifier && d.Type != TokenType.Number)
+            {
+                if (d.Type == TokenType.OpenBracket)
+                {
+                    Sum(current);
+                    Eat(TokenType.CloseBracket);
+                }
+                else
+                    throw new ErrorException("Неожиданный символ D: " + d.Value, d, ErrorType.SyntaxError);
+            }
+            else           
+                current.Add(d);
+                
+        }
+        
+        static Token DeclarationCheck(Token t)
         {
             if (t.Type == TokenType.Identifier && currentVisibility.Find(t.Value) == null)
-                throw new ErrorException("Использование ранее необъявленной переменной", t, ErrorType.SyntaxError); 
+                throw new ErrorException("Использование ранее необъявленной переменной", t, ErrorType.SyntaxError);
+            else
+                return t;
         }
-        static Token Peek(int Pos = 0)
+        static Token Peek
         {
-            return tokens[Pos];
+            get
+            {
+                return tokens.First();
+            }
         }
-        static Token Get()
+        static Token Get
         {
-            Token t = Peek();
-            tokens.RemoveAt(0);
-            return t;
+            get
+            {
+                Token t = Peek;
+                tokens.RemoveAt(0);
+                return t;
+            }
         }
         static void PutBack(Token t)
         {
             tokens.Insert(0, t);
         }
-        static void Eat(TokenType type)
+        static Token Eat(params TokenType[] types)
         {
-            Token t = Get();
-            if (t.Type != type)
-                throw new ErrorException("Ожидаемый токен: " + type.ToString() + ", а найдено: " + t.Type.ToString(), t, ErrorType.SyntaxError);
+            Token t = Get;            
+            if (!types.Contains(t.Type))
+                throw new ErrorException("Ожидаемый токен: " + String.Join(",", types.Select(p => p.ToString()).ToArray()) + ", а найдено: " + t.Type.ToString(), t, ErrorType.SyntaxError);
+            return t;
         }
     }
     class Visibility

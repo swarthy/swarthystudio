@@ -15,9 +15,13 @@ namespace SwarthyStudio
         bool isCodeChanged = false;
         string filePath = "";
         bool catchedError = false;
+
+        bool debug = true;
+        DEBUG debugForm;
         public Form1()
         {
-            InitializeComponent();            
+            InitializeComponent();
+            debugForm = new DEBUG();            
         }
 
         private void новыйToolStripMenuItem_Click(object sender, EventArgs e)
@@ -111,7 +115,7 @@ namespace SwarthyStudio
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (isCodeChanged)
+            if (isCodeChanged && !debug)
                 switch (MessageBox.Show("Сохранить изменения" + (filePath == "" ? "" : " в файле " + filePath) + " перед выходом?", "Swarthy Studio", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
                 {
                     case System.Windows.Forms.DialogResult.Yes:
@@ -128,18 +132,16 @@ namespace SwarthyStudio
             cursorPosition.Text = "Строка: " + (tbCode.GetLineFromCharIndex(tbCode.SelectionStart) + 1).ToString() + " Столбец: " + (tbCode.SelectionStart - tbCode.GetFirstCharIndexOfCurrentLine() + 1).ToString();            
         }
 
-        private void colorizeToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            //MessageBox.Show(tbCode.Find("zuhra").ToString());            
-            //tbCode.SelectionColor = Color.Blue;
-        }
 
         private void компиляцияToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            //SyntaxAnalyzer.Analyze(tbCode.Text);
-            //Helper.isDigit('A');            
-            //Text=Number.Parse(tbCode.Text).ToString();
-            tbLog.Clear();            
+            tbLog.Clear();
+            if (debug)
+            {
+                debugForm.lexems.Clear();                
+                debugForm.Show();
+                this.BringToFront();
+            }
             try
             {
                 LexicalAnalyzer.Process(tbCode.Text);
@@ -156,8 +158,10 @@ namespace SwarthyStudio
                 tbCode.SelectionLength = 0;
                 catchedError = true;
             }
+
             foreach (Token t in LexicalAnalyzer.Lexems)
-                tbLog.Text += t.ToString() + "\r\n";
+                debugForm.lexems.Text += t.ToString() + "\r\n";
+            debugForm.ShowTree(SyntaxAnalyzer.Tree);
         }
 
         void clearCode()
@@ -194,6 +198,11 @@ namespace SwarthyStudio
                 tbCode.SelectionStart = pos+count+1;
                 e.Handled = true;
             }            
+        }
+
+        private void debugToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            debugForm.Show();
         }
 
 
