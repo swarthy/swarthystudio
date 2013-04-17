@@ -81,6 +81,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SyntaxAnalyzer.cs" />
     <Compile Include="SyntaxTree.cs" />
+    <Compile Include="Triad.cs" />
     <EmbeddedResource Include="DEBUG.resx">
       <DependentUpon>DEBUG.cs</DependentUpon>
     </EmbeddedResource>

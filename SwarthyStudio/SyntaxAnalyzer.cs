@@ -93,10 +93,10 @@ namespace SwarthyStudio
             SyntaxTree current = new SyntaxTree(SyntaxTreeType.Sum);
             parentTree.Add(current);
             Mul(current);
-            if(Peek.SubType == TokenSubType.Add)
+            while(Peek.SubType == TokenSubType.Add)
             {
                 current.Add(Eat(TokenType.Operation));
-                Sum(current);
+                Mul(current);
             }
         }
         static void Mul(SyntaxTree parentTree)
@@ -104,10 +104,10 @@ namespace SwarthyStudio
             SyntaxTree current = new SyntaxTree(SyntaxTreeType.Mul);
             parentTree.Add(current);
             Atom(current);
-            if(Peek.SubType == TokenSubType.Mul)
+            while(Peek.SubType == TokenSubType.Mul)
             {
                 current.Add(Eat(TokenType.Operation));
-                Mul(current);
+                Atom(current);
             }
         }
         static void Atom(SyntaxTree parentTree)
@@ -126,8 +126,7 @@ namespace SwarthyStudio
                     throw new ErrorException("Неожиданный символ D: " + d.Value, d, ErrorType.SyntaxError);
             }
             else           
-                current.Add(d);
-                
+                current.Add(d);                
         }
         
         static Token DeclarationCheck(Token t)
@@ -167,11 +166,14 @@ namespace SwarthyStudio
     }
     class Visibility
     {
+        public static Visibility GLOBAL = null;
         public Visibility parentVisibility = null;
         public List<Variable> variables = new List<Variable>();
         public Visibility()
         {
-            parentVisibility = SyntaxAnalyzer.currentVisibility;
+            if (GLOBAL == null)
+                GLOBAL = this;
+            parentVisibility = SyntaxAnalyzer.currentVisibility;            
             SyntaxAnalyzer.currentVisibility = this;
         }
         public Variable Find(string s)

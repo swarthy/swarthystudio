@@ -161,7 +161,7 @@ namespace SwarthyStudio
 
             foreach (Token t in LexicalAnalyzer.Lexems)
                 debugForm.lexems.Text += t.ToString() + "\r\n";
-            debugForm.ShowTree(SyntaxAnalyzer.Tree);
+            debugForm.ShowTree(SyntaxAnalyzer.Tree);            
         }
 
         void clearCode()
@@ -189,7 +189,7 @@ namespace SwarthyStudio
                 int line = tbCode.GetLineFromCharIndex(pos);                
                 string s = "\n";
                 int count = 0;
-                for (int i = 0; tbCode.Lines[line][i] == '\t'; i++)
+                for (int i = 0; tbCode.Lines[line].Length-1>=i && tbCode.Lines[line][i] == '\t'; i++)
                 {
                     s += "\t";
                     count++;

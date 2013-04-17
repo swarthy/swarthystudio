@@ -12,10 +12,12 @@ namespace SwarthyStudio
     public partial class DEBUG : Form
     {
         public TextBox lexems;
+        public TreeNodeCollection FieldOfView;
         public DEBUG()
         {
             InitializeComponent();
             lexems = tbLexems;
+            //FieldOfView = tvFieldOfView.Nodes;
         }
 
         private void DEBUG_FormClosing(object sender, FormClosingEventArgs e)
