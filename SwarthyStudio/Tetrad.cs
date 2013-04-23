@@ -20,7 +20,7 @@ namespace SwarthyStudio
         {
             list.Add(t);
         }
-
+        
         static Tetrad ParseTree(SyntaxTree tree)
         {
             Tetrad t = new Tetrad();
@@ -54,10 +54,10 @@ namespace SwarthyStudio
                 switch (currentTetrad.Operation)
                 {
                     case OperationType.ADD:
-                        currentTetrad.Result = currentTetrad.Operand1.Value + currentTetrad.Operand2.Value;
+                        currentTetrad.Result = currentTetrad.Operand1.Value + currentTetrad.Operand2.Value;                        
                         break;
                     case OperationType.SUB:
-                        currentTetrad.Result = currentTetrad.Operand1.Value - currentTetrad.Operand2.Value;
+                        currentTetrad.Result = currentTetrad.Operand1.Value - currentTetrad.Operand2.Value;                        
                         break;
                     case OperationType.MUL:
                         currentTetrad.Result = currentTetrad.Operand1.Value * currentTetrad.Operand2.Value;
@@ -75,7 +75,7 @@ namespace SwarthyStudio
                         currentTetrad.Result = currentTetrad.Operand1.Value == currentTetrad.Operand2.Value ? 1 : 0;
                         break;
                     case OperationType.IF:
-                        if (currentTetrad.Operand1.Value == 1)
+                        if (currentTetrad.Operand1.Value == 1)//operand1 == true
                         {
 
                         }
@@ -106,31 +106,20 @@ namespace SwarthyStudio
     {
         public Operand Operand1, Operand2;
         public OperationType Operation;
-        bool isLink = false;
-        bool solved = false;
+        bool isLink = false;        
         public bool IsLink
         {
             get
             {
                 return isLink;
             }
-        }
-        public bool Solved
-        {
-            get
-            {
-                return solved;
-            }
-        }
+        }        
         internal int Result = 0;
         public int Value
         {
             get
-            {
-                if (!Solved)
-                    throw new ErrorException("Обращение к еще не обработанной триаде", ErrorType.InternalError);
-                else
-                    return Result;
+            {                
+                return Result;
             }
         }
         public Tetrad() { }
@@ -139,7 +128,11 @@ namespace SwarthyStudio
             Operation = operation;
             Operand1 = operand1;
             Operand2 = operand2;
-        }        
+        }
+        public override string ToString()
+        {
+            return string.Format("({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation),Operand1, Operand2);
+        }
     }
     internal class Operand
     {
@@ -176,15 +169,20 @@ namespace SwarthyStudio
             this.var = var;
             type = OperandType.Variable;
         }
+        public Operand(string existVariableName)
+        {
+            this.var = new Variable(existVariableName);
+            type = OperandType.Variable;
+        }
         public Operand(int constant)
         {
             this.constant = constant;
             type = OperandType.Constant;
         }
-        public Operand(Tetrad triad)
+        public Operand(Tetrad tetrad)
         {
-            this.tetrad = triad;
-            type = OperandType.Triad;
+            this.tetrad = tetrad;
+            type = OperandType.Tetrad;
         }
         public int Value
         {
@@ -198,7 +196,7 @@ namespace SwarthyStudio
                     case OperandType.Variable:
                         return var.Value;
                         break;
-                    case OperandType.Triad:
+                    case OperandType.Tetrad:
                         return tetrad.Value;
                         break;
                     default:
@@ -207,32 +205,67 @@ namespace SwarthyStudio
                 }
             }
         }
-        public bool Ready
+        public void Set(Tetrad tetrad)
         {
-            get
+            this.tetrad = tetrad;
+            type = OperandType.Tetrad;
+        }
+        public void Set(Variable var)
+        {
+            this.var = var;
+            type = OperandType.Variable;
+        }
+        public void Set(string existVariableName)
+        {
+            this.var = new Variable(existVariableName);
+            type = OperandType.Variable;
+        }
+        public void Set(int constant)
+        {
+            this.constant = constant;
+            type = OperandType.Constant;
+        }
+        public override string ToString()
+        {
+            switch (Type)
             {
-                if (Type == OperandType.Triad)
-                    return tetrad.Solved;
-                else
-                    return true;
+                case OperandType.Constant:
+                    return constant.ToString();
+                    break;
+                case OperandType.Variable:
+                    return string.Format("<{0}>", var.name);
+                    break;
+                case OperandType.Tetrad:
+                    return string.Format("^{0}",TetradManager.list.IndexOf(tetrad));
+                    break;
+                default:
+                    return "[unknown operand type]";
             }
         }
-
+        public Operand Clone()
+        {            
+            switch (Type)
+            {
+                case OperandType.Constant:
+                    return new Operand(constant);
+                    break;
+                case OperandType.Tetrad:
+                    return new Operand(tetrad);
+                    break;
+                case OperandType.Variable:
+                    return new Operand(var);
+                    break;
+                default:
+                    return null;
+            }            
+        }
     }    
     internal enum OperandType
     {
-        Constant, Variable, Triad
+        Constant, Variable, Tetrad
     }
     internal enum OperationType
     {
         ADD, SUB, MUL, DIV, ASSIGN, IF, WRITE, READ, MORE, LESS, EQUAL
-    }
-    interface Leaf
-    {
-        int Value
-        {
-            get;
-            set;
-        }
-    }
+    }    
 }

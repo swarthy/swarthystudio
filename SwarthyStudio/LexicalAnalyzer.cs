@@ -299,6 +299,15 @@ namespace SwarthyStudio
             Line = line;
             Length = length;
         }
+        public int GetNumValue
+        {
+            get
+            {
+                if (Type != TokenType.Number)
+                    throw new ErrorException("Попытка получения числового значения токена, не являющегося числом",this,ErrorType.SemanticError);
+                return SubType == TokenSubType.HexNumber ? H.parseHex(Value) : H.parseRome(Value);
+            }
+        }
         public override string ToString()
         {
             return String.Format("[Value: \"{0}\", Type: {1}, SubType: {2}, Line: {3}, Position: {4}]", Value, Enum.GetName(typeof(TokenType), Type), Enum.GetName(typeof(TokenSubType), SubType), Line, Position);

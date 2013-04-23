@@ -137,13 +137,14 @@ namespace SwarthyStudio
             tbLog.Clear();
             if (debug)
             {
-                debugForm.lexems.Clear();                
+                debugForm.lexems.Clear();
+                debugForm.tetrads.Clear();
                 debugForm.Show();
                 this.BringToFront();
             }
             try
             {
-                LexicalAnalyzer.Process(tbCode.Text);
+                LexicalAnalyzer.Process(tbCode.Text);                                
                 SyntaxAnalyzer.Process();
             }
             catch (ErrorException ex)
@@ -163,7 +164,9 @@ namespace SwarthyStudio
 
             foreach (Token t in LexicalAnalyzer.Lexems)
                 debugForm.lexems.Text += t.ToString() + "\r\n";
-            debugForm.ShowTree(SyntaxAnalyzer.Tree);            
+            debugForm.ShowTree(SyntaxAnalyzer.Tree);
+            foreach (Tetrad tetrad in TetradManager.list)
+                debugForm.tetrads.Text += tetrad.ToString() + "\r\n";
         }
 
         void clearCode()

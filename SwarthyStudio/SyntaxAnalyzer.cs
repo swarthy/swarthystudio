@@ -8,7 +8,7 @@ namespace SwarthyStudio
     static class SyntaxAnalyzer
     {        
         private static List<Token> tokens;
-        public static Dictionary<string, int> variables = new Dictionary<string, int>();
+        public static Dictionary<string, int> Variables = new Dictionary<string, int>();
         public static Visibility currentVisibility = null;
         public static SyntaxTree Tree;
         static public void Initialize()
@@ -21,7 +21,8 @@ namespace SwarthyStudio
             tokens = LexicalAnalyzer.Lexems.ToList();//DEBUG: копируем список, в release версии - передать по ссылке
             currentVisibility = null;
             Tree = new SyntaxTree();
-            variables.Clear();
+            Variables.Clear();
+            TetradManager.list.Clear();
             Statement(Tree);
         }
         static void Statement(SyntaxTree parentTree)
@@ -50,6 +51,7 @@ namespace SwarthyStudio
                 }
             }            
             Eat(TokenType.CloseCurlyBracket);// }
+            currentVisibility.FreeAllVariables();//освобождаем память из под всех переменных, объявленных в этой области видимости
             currentVisibility = currentVisibility.parentVisibility;//возвращаемся в родительскую область видимости
         }
 
@@ -82,51 +84,70 @@ namespace SwarthyStudio
         {
             SyntaxTree current = new SyntaxTree(SyntaxTreeType.Assign);
             parentTree.Add(current);
-            current.Add(Eat(TokenType.Identifier));
+            Operand op1 = new Operand(current.Add(Eat(TokenType.Identifier)).Value);
             current.Add(Eat(TokenType.Assign));            
-            Sum(current);
+            Operand op2 = Sum(current);
             Eat(TokenType.Delimitier);
+            TetradManager.Add(new Tetrad(OperationType.ASSIGN, op1.Clone(), op2.Clone()));
         }        
 
-        static void Sum(SyntaxTree parentTree)
+        static Operand Sum(SyntaxTree parentTree)
         {
             SyntaxTree current = new SyntaxTree(SyntaxTreeType.Sum);
             parentTree.Add(current);
-            Mul(current);
+            Operand op1 = Mul(current);
             while(Peek.SubType == TokenSubType.Add)
-            {
+            {                
+                OperationType operation = Peek.Value=="+"?OperationType.ADD:OperationType.SUB;
                 current.Add(Eat(TokenType.Operation));
-                Mul(current);
+                Operand op2 = Mul(current);
+                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone());
+                TetradManager.Add(t);
+                op1.Set(t);
             }
+            return op1;
         }
-        static void Mul(SyntaxTree parentTree)
+        static Operand Mul(SyntaxTree parentTree)
         {
             SyntaxTree current = new SyntaxTree(SyntaxTreeType.Mul);
             parentTree.Add(current);
-            Atom(current);
+            Operand op1 = Atom(current);
             while(Peek.SubType == TokenSubType.Mul)
             {
+                OperationType operation = Peek.Value == "*" ? OperationType.MUL : OperationType.DIV;
                 current.Add(Eat(TokenType.Operation));
-                Atom(current);
+                Operand op2 = Atom(current);
+                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone());
+                TetradManager.Add(t);
+                op1.Set(t);
             }
+            return op1;
         }
-        static void Atom(SyntaxTree parentTree)
+        static Operand Atom(SyntaxTree parentTree)
         {
             SyntaxTree current = new SyntaxTree(SyntaxTreeType.Atom);
             parentTree.Add(current);
             Token d = Get;
+            Operand op = new Operand();
             if (d.Type != TokenType.Identifier && d.Type != TokenType.Number)
             {
                 if (d.Type == TokenType.OpenBracket)
                 {
-                    Sum(current);
+                    op = Sum(current);
                     Eat(TokenType.CloseBracket);
                 }
                 else
                     throw new ErrorException("Неожиданный символ D: " + d.Value, d, ErrorType.SyntaxError);
             }
-            else           
-                current.Add(d);                
+            else
+            {
+                current.Add(d);
+                if (d.Type == TokenType.Identifier)
+                    op = new Operand(d.Value);
+                else
+                    op = new Operand(d.SubType==TokenSubType.HexNumber?H.parseHex(d.Value):H.parseRome(d.Value));
+            }
+            return op;
         }
         
         static Token DeclarationCheck(Token t)
@@ -198,12 +219,17 @@ namespace SwarthyStudio
             }
             else
             {
-                SyntaxAnalyzer.variables.Add(s, val);
+                SyntaxAnalyzer.Variables[s] = val;
                 Variable newV = new Variable(s);
                 variables.Add(newV);
                 return newV;
             }
-        }        
+        }
+        public void FreeAllVariables()
+        {
+            foreach (Variable v in variables)
+                SyntaxAnalyzer.Variables.Remove(v.name);
+        }
     }
     class Variable
     {        
@@ -219,14 +245,14 @@ namespace SwarthyStudio
         {
             get
             {
-                if (SyntaxAnalyzer.variables.Keys.Contains(name))
-                    return SyntaxAnalyzer.variables[name];
+                if (SyntaxAnalyzer.Variables.Keys.Contains(name))
+                    return SyntaxAnalyzer.Variables[name];
                 else
                     throw new ErrorException("Обращение к ранее не объявленной переменной \""+name+"\"", ErrorType.SemanticError);
             }
             set
             {
-                SyntaxAnalyzer.variables[name] = value;
+                SyntaxAnalyzer.Variables[name] = value;
             }
         }
     }

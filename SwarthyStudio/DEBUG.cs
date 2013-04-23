@@ -12,11 +12,13 @@ namespace SwarthyStudio
     public partial class DEBUG : Form
     {
         public TextBox lexems;
+        public TextBox tetrads;
         public TreeNodeCollection FieldOfView;
         public DEBUG()
         {
             InitializeComponent();
             lexems = tbLexems;
+            tetrads = tbTetradList;
             //FieldOfView = tvFieldOfView.Nodes;
         }
 

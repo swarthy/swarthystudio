@@ -11,7 +11,9 @@ namespace SwarthyStudio
         static public char Assign = '=';
         static public string Operations = "+-*/";        
         static public string HexDigits = "0123456789ABCDEF";
-        static public string RomeDigits = "IVXLCDM";                
+        static public string RomeDigits = "IVXLCDM";
+        static string[] helpRomeDigits = new string[] { "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I" };
+        static int[] helpArabDigits = new int[] { 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1 };
         public static bool isOperation(char sym)
         {
             return Operations.Contains(sym);
@@ -61,6 +63,31 @@ namespace SwarthyStudio
             
             subType = isHex ? TokenSubType.HexNumber : isRome ? TokenSubType.RomeNumber : TokenSubType.None;            
             return new Token(s, type, subType,pos-s.Length,line,s.Length);                 
+        }        
+        static public int parseRome(string romeString)
+        {
+            int i=0, n=0;
+            while (romeString.Length > 0)
+            {
+                while (romeString.Length > 0 && helpRomeDigits[i] == ((helpRomeDigits[i].Length<=romeString.Length)?romeString.Substring(0, helpRomeDigits[i].Length):""))
+                {
+                    romeString = romeString.Remove(0, helpRomeDigits[i].Length);
+                    n += helpArabDigits[i];
+                }
+                i++;
+            }
+            return n;
+        }
+        static public int parseHex(string hexString)
+        {
+            hexString = hexString.ToUpper();
+            int temp = 0, mul = 1;
+            for (int i = hexString.Length - 1; i >= 0; i--)
+            {
+                temp += H.HexDigits.IndexOf(hexString[i]) * mul;
+                mul *= 16;
+            }
+            return temp;
         }
     }
 

@@ -33,9 +33,12 @@
             this.tbLexems = new System.Windows.Forms.TextBox();
             this.tpSyntaxTree = new System.Windows.Forms.TabPage();
             this.tvSyntaxTree = new System.Windows.Forms.TreeView();
+            this.tpTetrads = new System.Windows.Forms.TabPage();
+            this.tbTetradList = new System.Windows.Forms.TextBox();
             this.tabControl1.SuspendLayout();
             this.tpLexems.SuspendLayout();
             this.tpSyntaxTree.SuspendLayout();
+            this.tpTetrads.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl1
@@ -45,6 +48,7 @@
                         | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl1.Controls.Add(this.tpLexems);
             this.tabControl1.Controls.Add(this.tpSyntaxTree);
+            this.tabControl1.Controls.Add(this.tpTetrads);
             this.tabControl1.Location = new System.Drawing.Point(12, 12);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
@@ -67,11 +71,11 @@
             this.tbLexems.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
                         | System.Windows.Forms.AnchorStyles.Left)
                         | System.Windows.Forms.AnchorStyles.Right)));
-            this.tbLexems.Location = new System.Drawing.Point(6, 6);
+            this.tbLexems.Location = new System.Drawing.Point(3, 3);
             this.tbLexems.Multiline = true;
             this.tbLexems.Name = "tbLexems";
             this.tbLexems.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.tbLexems.Size = new System.Drawing.Size(571, 234);
+            this.tbLexems.Size = new System.Drawing.Size(577, 240);
             this.tbLexems.TabIndex = 0;
             // 
             // tpSyntaxTree
@@ -94,6 +98,28 @@
             this.tvSyntaxTree.Size = new System.Drawing.Size(577, 243);
             this.tvSyntaxTree.TabIndex = 0;
             // 
+            // tpTetrads
+            // 
+            this.tpTetrads.Controls.Add(this.tbTetradList);
+            this.tpTetrads.Location = new System.Drawing.Point(4, 22);
+            this.tpTetrads.Name = "tpTetrads";
+            this.tpTetrads.Size = new System.Drawing.Size(583, 246);
+            this.tpTetrads.TabIndex = 2;
+            this.tpTetrads.Text = "Тетрады";
+            this.tpTetrads.UseVisualStyleBackColor = true;
+            // 
+            // tbTetradList
+            // 
+            this.tbTetradList.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                        | System.Windows.Forms.AnchorStyles.Left)
+                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.tbTetradList.Location = new System.Drawing.Point(3, 3);
+            this.tbTetradList.Multiline = true;
+            this.tbTetradList.Name = "tbTetradList";
+            this.tbTetradList.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.tbTetradList.Size = new System.Drawing.Size(577, 240);
+            this.tbTetradList.TabIndex = 0;
+            // 
             // DEBUG
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -108,6 +134,8 @@
             this.tpLexems.ResumeLayout(false);
             this.tpLexems.PerformLayout();
             this.tpSyntaxTree.ResumeLayout(false);
+            this.tpTetrads.ResumeLayout(false);
+            this.tpTetrads.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -119,5 +147,7 @@
         private System.Windows.Forms.TextBox tbLexems;
         private System.Windows.Forms.TabPage tpSyntaxTree;
         private System.Windows.Forms.TreeView tvSyntaxTree;
+        private System.Windows.Forms.TabPage tpTetrads;
+        private System.Windows.Forms.TextBox tbTetradList;
     }
 }

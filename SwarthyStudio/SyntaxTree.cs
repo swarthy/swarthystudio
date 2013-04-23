@@ -28,10 +28,11 @@ namespace SwarthyStudio
         {
             SubTrees.Add(tree);
         }
-        public void Add(Token t)
+        public Token Add(Token t)
         {
             SyntaxTree tree = new SyntaxTree(t);
             SubTrees.Add(tree);
+            return t;
         }
         public int Count
         {
