@@ -132,9 +132,8 @@ namespace SwarthyStudio
             cursorPosition.Text = "Строка: " + (tbCode.GetLineFromCharIndex(tbCode.SelectionStart) + 1).ToString() + " Столбец: " + (tbCode.SelectionStart - tbCode.GetFirstCharIndexOfCurrentLine() + 1).ToString();            
         }
 
-
         private void компиляцияToolStripMenuItem_Click(object sender, EventArgs e)
-        {
+        {            
             tbLog.Clear();
             if (debug)
             {
@@ -150,12 +149,15 @@ namespace SwarthyStudio
             catch (ErrorException ex)
             {
                 tbLog.Text += ex.ToString()+"\r\n";
-                int oldPos = tbCode.SelectionStart;
-                tbCode.Select(tbCode.GetFirstCharIndexFromLine(ex.Line)+ex.Position, ex.Length);
-                tbCode.SelectionBackColor = Color.Gray;
-                tbCode.SelectionColor = Color.Red;
-                tbCode.SelectionStart = oldPos;
-                tbCode.SelectionLength = 0;
+                if (ex.Position != -1)
+                {
+                    int oldPos = tbCode.SelectionStart;
+                    tbCode.Select(tbCode.GetFirstCharIndexFromLine(ex.Line) + ex.Position, ex.Length);
+                    tbCode.SelectionBackColor = Color.Gray;
+                    tbCode.SelectionColor = Color.Red;
+                    tbCode.SelectionStart = oldPos;
+                    tbCode.SelectionLength = 0;
+                }
                 catchedError = true;
             }
 
@@ -181,6 +183,15 @@ namespace SwarthyStudio
             SyntaxAnalyzer.Initialize();
         }
 
+        class test
+        {
+            public int val;
+            public test(int a)
+            {
+                val = a;
+            }
+        }
+
         private void tbCode_KeyDown(object sender, KeyEventArgs e)
         {            
             if (e.KeyValue == 13)
@@ -204,7 +215,5 @@ namespace SwarthyStudio
         {
             debugForm.Show();
         }
-
-
     }
 }

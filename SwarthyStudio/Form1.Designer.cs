@@ -222,7 +222,7 @@
             this.tbCode.Name = "tbCode";
             this.tbCode.Size = new System.Drawing.Size(533, 161);
             this.tbCode.TabIndex = 3;
-            this.tbCode.Text = "{\n\tb=1;c=1;d=1;\n                a=b*c+d-b*10;\n}";
+            this.tbCode.Text = "{\n\ta=1+2*(3-4/(5+6));\n\tif (2>1)\n\t{\n\t\tb=2;\n\t}\n\telse\n\t{\n\t\tc=3;\n\t}\n}\n";
             this.tbCode.SelectionChanged += new System.EventHandler(this.tbCode_SelectionChanged);
             this.tbCode.TextChanged += new System.EventHandler(this.tbCode_TextChanged);
             this.tbCode.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tbCode_KeyDown);

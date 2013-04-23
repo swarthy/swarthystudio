@@ -8,7 +8,7 @@ namespace SwarthyStudio
     static class SyntaxAnalyzer
     {        
         private static List<Token> tokens;
-        public static List<int> variables = new List<int>();
+        public static Dictionary<string, int> variables = new Dictionary<string, int>();
         public static Visibility currentVisibility = null;
         public static SyntaxTree Tree;
         static public void Initialize()
@@ -169,11 +169,14 @@ namespace SwarthyStudio
         public static Visibility GLOBAL = null;
         public Visibility parentVisibility = null;
         public List<Variable> variables = new List<Variable>();
+        public List<Visibility> subVisibilities = new List<Visibility>();
         public Visibility()
         {
             if (GLOBAL == null)
                 GLOBAL = this;
-            parentVisibility = SyntaxAnalyzer.currentVisibility;            
+            parentVisibility = SyntaxAnalyzer.currentVisibility;
+            if (parentVisibility!=null)
+                parentVisibility.subVisibilities.Add(this);
             SyntaxAnalyzer.currentVisibility = this;
         }
         public Variable Find(string s)
@@ -195,34 +198,35 @@ namespace SwarthyStudio
             }
             else
             {
-                SyntaxAnalyzer.variables.Add(val);
-                Variable newV = new Variable(SyntaxAnalyzer.variables.Count - 1, s);
+                SyntaxAnalyzer.variables.Add(s, val);
+                Variable newV = new Variable(s);
                 variables.Add(newV);
                 return newV;
             }
         }        
     }
     class Variable
-    {
-        public int pos;
+    {        
         public string name;
         public Variable()
         {
         }
-        public Variable(int pos, string name)
+        public Variable(string name)
         {
-            this.name = name;
-            this.pos = pos;
+            this.name = name;            
         }
         public int Value
         {
             get
             {
-                return SyntaxAnalyzer.variables[pos];
+                if (SyntaxAnalyzer.variables.Keys.Contains(name))
+                    return SyntaxAnalyzer.variables[name];
+                else
+                    throw new ErrorException("Обращение к ранее не объявленной переменной \""+name+"\"", ErrorType.SemanticError);
             }
             set
             {
-                SyntaxAnalyzer.variables[pos] = value;
+                SyntaxAnalyzer.variables[name] = value;
             }
         }
     }

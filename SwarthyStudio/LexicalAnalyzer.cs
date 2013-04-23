@@ -243,7 +243,8 @@ namespace SwarthyStudio
     {
         LexicalError,
         SyntaxError,
-        SemanticError
+        SemanticError,
+        InternalError        
     }
     class Error
     {
