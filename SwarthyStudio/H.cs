@@ -43,7 +43,19 @@ namespace SwarthyStudio
                     break;
                 case "else":
                     type = TokenType.Else;
-                    break;                
+                    break;
+                case "for":
+                    type = TokenType.For;
+                    break;
+                case "while":
+                    type = TokenType.While;
+                    break;
+                case "read":
+                    type = TokenType.Read;
+                    break;
+                case "write":
+                    type = TokenType.Write;
+                    break;
             }
             bool isHex = true, isRome = true;
             foreach (char c in s)

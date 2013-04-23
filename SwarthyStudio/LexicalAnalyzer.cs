@@ -320,8 +320,7 @@ namespace SwarthyStudio
     enum TokenType
     {
         Identifier = 0,
-        Number,
-        ReservedWord,
+        Number,        
         Assign,
         Operation,
         OpenBracket,
@@ -331,6 +330,10 @@ namespace SwarthyStudio
         Delimitier,
         If,
         Else,
+        While,
+        For,
+        Read,
+        Write,
         Compare,
         EOS        
     }

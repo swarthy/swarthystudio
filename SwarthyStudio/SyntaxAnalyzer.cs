@@ -23,12 +23,15 @@ namespace SwarthyStudio
             TetradManager.list.Clear();
             Statement();
         }
-        static void Statement()
+        static Visibility Statement(Visibility exist = null)
         {
             bool oneAction = Peek.Type != TokenType.OpenCurlyBracket, endWhile=false;
             if (!oneAction)
-                Eat(TokenType.OpenCurlyBracket);          
-            new Visibility();
+                Eat(TokenType.OpenCurlyBracket);
+            if (exist != null)
+                currentVisibility = exist;
+            else
+                new Visibility();
             while(Peek.Type!=TokenType.CloseCurlyBracket && !endWhile)
             {
                 switch (Peek.Type)
@@ -40,9 +43,14 @@ namespace SwarthyStudio
                     case TokenType.If:
                         If();
                         break;
+                    case TokenType.While:
+                        While();
+                        break;
+                    case TokenType.For:
+                        For();
+                        break;
                     case TokenType.Number:
-                        throw new ErrorException("Невозможно присвоить значение константе: " + Peek.Value, Peek, ErrorType.SyntaxError);
-                        return;
+                        throw new ErrorException("Невозможно присвоить значение константе: " + Peek.Value, Peek, ErrorType.SyntaxError);                        
                         break;
                     default:
                         throw new ErrorException("Неожиданный символStmt: " + Peek.Value, Peek, ErrorType.SyntaxError);
@@ -51,8 +59,10 @@ namespace SwarthyStudio
                     endWhile = true;
             }            
             if (!oneAction)
-                Eat(TokenType.CloseCurlyBracket);// }            
+                Eat(TokenType.CloseCurlyBracket);// }   
+            Visibility old = currentVisibility;
             currentVisibility = currentVisibility.parentVisibility;//возвращаемся в родительскую область видимости
+            return old;
         }
 
         static void If()
@@ -90,8 +100,46 @@ namespace SwarthyStudio
             }
         }
 
-        static Tetrad LogicalExpression()
+        static void While()
         {
+            Eat(TokenType.While);
+            Eat(TokenType.OpenBracket);
+            Operand logic = new Operand(LogicalExpression());
+            Tetrad iftetrad = new Tetrad(OperationType.IF, logic, null), goTo = new Tetrad(OperationType.GOTO, new Operand(iftetrad), null);
+            TetradManager.Add(iftetrad);
+
+            Eat(TokenType.CloseBracket);
+
+            Statement();
+
+            TetradManager.Add(goTo);//после тела цикла - проверяем условие
+            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));//точка выхода
+        }
+
+        static void For()
+        {
+            Eat(TokenType.For);
+            Eat(TokenType.OpenBracket);  //for(statement;logic;statement)
+            Visibility forVis = Statement();
+            Operand logic = new Operand(LogicalExpression(forVis));
+            Eat(TokenType.Delimitier);
+
+            Tetrad iftetrad = new Tetrad(OperationType.IF, logic, null), goTo = new Tetrad(OperationType.GOTO, new Operand(iftetrad), null);
+            TetradManager.Add(iftetrad);  
+
+            Statement(forVis);
+            Eat(TokenType.CloseBracket);
+            
+            Statement(forVis);
+
+            TetradManager.Add(goTo);//после тела цикла - проверяем условие
+            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));//точка выхода
+        }
+
+        static Tetrad LogicalExpression(Visibility exists = null)
+        {
+            if (exists!=null)
+                currentVisibility = exists;
             Operand op1, op2;
             Token operand1 = DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number));
             op1 = operand1.Type == TokenType.Identifier ? new Operand(operand1.Value) : new Operand(operand1.SubType == TokenSubType.HexNumber ? H.parseHex(operand1.Value) : H.parseRome(operand1.Value));
@@ -115,6 +163,8 @@ namespace SwarthyStudio
                     logic = null;
                     break;
             }
+            if (exists != null)
+                currentVisibility = currentVisibility.parentVisibility;
             return TetradManager.Add(logic);
         }
         
@@ -123,7 +173,8 @@ namespace SwarthyStudio
             Operand op1 = new Operand(Eat(TokenType.Identifier).Value);
             Eat(TokenType.Assign);            
             Operand op2 = Sum();
-            Eat(TokenType.Delimitier);
+            if (Peek.Type==TokenType.Delimitier)
+                Eat(TokenType.Delimitier);
             TetradManager.Add(new Tetrad(OperationType.ASSIGN, op1.Clone(), op2.Clone()));
         }        
 
