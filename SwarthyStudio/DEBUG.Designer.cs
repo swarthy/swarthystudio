@@ -31,13 +31,10 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tpLexems = new System.Windows.Forms.TabPage();
             this.tbLexems = new System.Windows.Forms.TextBox();
-            this.tpSyntaxTree = new System.Windows.Forms.TabPage();
-            this.tvSyntaxTree = new System.Windows.Forms.TreeView();
             this.tpTetrads = new System.Windows.Forms.TabPage();
             this.tbTetradList = new System.Windows.Forms.TextBox();
             this.tabControl1.SuspendLayout();
             this.tpLexems.SuspendLayout();
-            this.tpSyntaxTree.SuspendLayout();
             this.tpTetrads.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -47,7 +44,6 @@
                         | System.Windows.Forms.AnchorStyles.Left)
                         | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl1.Controls.Add(this.tpLexems);
-            this.tabControl1.Controls.Add(this.tpSyntaxTree);
             this.tabControl1.Controls.Add(this.tpTetrads);
             this.tabControl1.Location = new System.Drawing.Point(12, 12);
             this.tabControl1.Name = "tabControl1";
@@ -77,26 +73,6 @@
             this.tbLexems.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.tbLexems.Size = new System.Drawing.Size(577, 240);
             this.tbLexems.TabIndex = 0;
-            // 
-            // tpSyntaxTree
-            // 
-            this.tpSyntaxTree.Controls.Add(this.tvSyntaxTree);
-            this.tpSyntaxTree.Location = new System.Drawing.Point(4, 22);
-            this.tpSyntaxTree.Name = "tpSyntaxTree";
-            this.tpSyntaxTree.Size = new System.Drawing.Size(583, 246);
-            this.tpSyntaxTree.TabIndex = 1;
-            this.tpSyntaxTree.Text = "Синтаксическое дерево";
-            this.tpSyntaxTree.UseVisualStyleBackColor = true;
-            // 
-            // tvSyntaxTree
-            // 
-            this.tvSyntaxTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
-            this.tvSyntaxTree.Location = new System.Drawing.Point(3, 3);
-            this.tvSyntaxTree.Name = "tvSyntaxTree";
-            this.tvSyntaxTree.Size = new System.Drawing.Size(577, 243);
-            this.tvSyntaxTree.TabIndex = 0;
             // 
             // tpTetrads
             // 
@@ -133,7 +109,6 @@
             this.tabControl1.ResumeLayout(false);
             this.tpLexems.ResumeLayout(false);
             this.tpLexems.PerformLayout();
-            this.tpSyntaxTree.ResumeLayout(false);
             this.tpTetrads.ResumeLayout(false);
             this.tpTetrads.PerformLayout();
             this.ResumeLayout(false);
@@ -145,8 +120,6 @@
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tpLexems;
         private System.Windows.Forms.TextBox tbLexems;
-        private System.Windows.Forms.TabPage tpSyntaxTree;
-        private System.Windows.Forms.TreeView tvSyntaxTree;
         private System.Windows.Forms.TabPage tpTetrads;
         private System.Windows.Forms.TextBox tbTetradList;
     }

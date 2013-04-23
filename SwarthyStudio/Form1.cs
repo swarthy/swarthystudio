@@ -164,7 +164,7 @@ namespace SwarthyStudio
 
             foreach (Token t in LexicalAnalyzer.Lexems)
                 debugForm.lexems.Text += t.ToString() + "\r\n";
-            debugForm.ShowTree(SyntaxAnalyzer.Tree);
+            
             foreach (Tetrad tetrad in TetradManager.list)
                 debugForm.tetrads.Text += tetrad.ToString() + "\r\n";
         }

@@ -7,43 +7,19 @@ namespace SwarthyStudio
 {
     static public class TetradManager
     {
-        internal static List<Tetrad> list = new List<Tetrad>();
-        internal static int positionInList = 0;
+        internal static List<Tetrad> list = new List<Tetrad>();        
         static Tetrad currentTetrad;
         static public void Initialize()
-        {
-            positionInList = 0;
+        {            
             if (list.Count != 0)
                 list.Clear();            
         }
-        static internal void Add(Tetrad t)
+        static internal Tetrad Add(Tetrad t)
         {
             list.Add(t);
+            return t;
         }
         
-        static Tetrad ParseTree(SyntaxTree tree)
-        {
-            Tetrad t = new Tetrad();
-            if (tree.Type == SyntaxTreeType.Assign)
-            {
-                //tree.SubTrees[0].LeafValue.Value;
-            }
-            foreach (SyntaxTree sub in tree.SubTrees)
-            {
-                switch (sub.Type)
-                {
-                    case SyntaxTreeType.Assign:
-
-
-                        break;
-                    case SyntaxTreeType.Leaf:
-
-                        break;
-                }
-            }
-            return null;
-        }
-
         static public void BeginSolve()
         {
             currentTetrad = list.First();
@@ -91,15 +67,26 @@ namespace SwarthyStudio
                     case OperationType.ASSIGN:
                         currentTetrad.Operand1.Variable.Value = currentTetrad.Operand2.Value;
                         break;
+                    case OperationType.MARK://просто тетрада-метка, ничего не делает. нужна в if/if-else для упрощения передачи управления
+                        break;
+                    case OperationType.GOTO:
+                        goTo(currentTetrad.Operand1.Tetrad);
+                        break;
                 }
                 if (needIncrease)
-                    currentTetrad = list[++positionInList];
+                    currentTetrad = NextTetrad;
             }
         }
         static void goTo(Tetrad Next)
-        {
-            positionInList = list.IndexOf(Next);
+        {            
             currentTetrad = Next;
+        }
+        static Tetrad NextTetrad
+        {
+            get
+            {
+                return list[list.IndexOf(currentTetrad) + 1];
+            }
         }
     }
     internal class Tetrad
@@ -131,7 +118,7 @@ namespace SwarthyStudio
         }
         public override string ToString()
         {
-            return string.Format("({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation),Operand1, Operand2);
+            return string.Format("[{3}]\t({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation),Operand1, Operand2, TetradManager.list.IndexOf(this));
         }
     }
     internal class Operand
@@ -266,6 +253,6 @@ namespace SwarthyStudio
     }
     internal enum OperationType
     {
-        ADD, SUB, MUL, DIV, ASSIGN, IF, WRITE, READ, MORE, LESS, EQUAL
+        ADD, SUB, MUL, DIV, ASSIGN, IF, WRITE, READ, MORE, LESS, EQUAL, MARK, GOTO
     }    
 }

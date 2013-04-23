@@ -9,8 +9,7 @@ namespace SwarthyStudio
     {        
         private static List<Token> tokens;
         public static Dictionary<string, int> Variables = new Dictionary<string, int>();
-        public static Visibility currentVisibility = null;
-        public static SyntaxTree Tree;
+        public static Visibility currentVisibility = null;        
         static public void Initialize()
         {
             
@@ -19,28 +18,27 @@ namespace SwarthyStudio
         public static void Process()
         {
             tokens = LexicalAnalyzer.Lexems.ToList();//DEBUG: копируем список, в release версии - передать по ссылке
-            currentVisibility = null;
-            Tree = new SyntaxTree();
+            currentVisibility = null;            
             Variables.Clear();
             TetradManager.list.Clear();
-            Statement(Tree);
+            Statement();
         }
-        static void Statement(SyntaxTree parentTree)
+        static void Statement()
         {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Statement);
-            parentTree.Add(current);
-            Eat(TokenType.OpenCurlyBracket);          
+            bool oneAction = Peek.Type != TokenType.OpenCurlyBracket, endWhile=false;
+            if (!oneAction)
+                Eat(TokenType.OpenCurlyBracket);          
             new Visibility();
-            while(Peek.Type!=TokenType.CloseCurlyBracket)
+            while(Peek.Type!=TokenType.CloseCurlyBracket && !endWhile)
             {
                 switch (Peek.Type)
                 {
                     case TokenType.Identifier:
                         currentVisibility.FindOrCreate(Peek.Value, 0);
-                        Assign(current);                        
+                        Assign();                        
                         break;
                     case TokenType.If:
-                        If(current);
+                        If();
                         break;
                     case TokenType.Number:
                         throw new ErrorException("Невозможно присвоить значение константе: " + Peek.Value, Peek, ErrorType.SyntaxError);
@@ -49,99 +47,130 @@ namespace SwarthyStudio
                     default:
                         throw new ErrorException("Неожиданный символStmt: " + Peek.Value, Peek, ErrorType.SyntaxError);
                 }
+                if (oneAction)
+                    endWhile = true;
             }            
-            Eat(TokenType.CloseCurlyBracket);// }
-            currentVisibility.FreeAllVariables();//освобождаем память из под всех переменных, объявленных в этой области видимости
+            if (!oneAction)
+                Eat(TokenType.CloseCurlyBracket);// }            
             currentVisibility = currentVisibility.parentVisibility;//возвращаемся в родительскую область видимости
         }
 
-        static void If(SyntaxTree parentTree)
-        {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.If);
-            parentTree.Add(current);
-            current.Add(Eat(TokenType.If));
+        static void If()
+        {            
+            /*             (more, a, b)
+             * if (a>b)    (if, 0, startElseMark)
+             * {
+             * }           (goTo, endMark, 0)
+             * else
+             * {           (startElseMark, 0, 0) - куда переходить в случае невыполнения условия
+             * }
+             *             (endMark, 0, 0) - куда переходить из goTo в случае выполнения условия             
+             */
+            
+            Eat(TokenType.If);
             Eat(TokenType.OpenBracket);
-            LogicalExpression(current);
+            Operand logic = new Operand(LogicalExpression());
+            Tetrad iftetrad = new Tetrad(OperationType.IF, logic, null), goTo = new Tetrad(OperationType.GOTO, null, null);
+            TetradManager.Add(iftetrad);
+            
             Eat(TokenType.CloseBracket);
-            Statement(current);
+
+            Statement();
+
+            if (Peek.Type == TokenType.Else)
+                TetradManager.Add(goTo);            
+
+            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
+                        
             if (Peek.Type == TokenType.Else)
             {
-                current.Add(Eat(TokenType.Else));
-                Statement(current);
+                Eat(TokenType.Else);
+                Statement();
+                goTo.Operand1 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
             }
         }
 
-        static void LogicalExpression(SyntaxTree parentTree)
+        static Tetrad LogicalExpression()
         {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.LogicalExpression);
-            parentTree.Add(current);
-            current.Add(DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number)));
-            current.Add(Eat(TokenType.Compare));
-            current.Add(DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number)));
+            Operand op1, op2;
+            Token operand1 = DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number));
+            op1 = operand1.Type == TokenType.Identifier ? new Operand(operand1.Value) : new Operand(operand1.SubType == TokenSubType.HexNumber ? H.parseHex(operand1.Value) : H.parseRome(operand1.Value));
+            Token operation = Eat(TokenType.Compare);            
+            Token operand2 = DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number));
+            op2 = operand2.Type == TokenType.Identifier ? new Operand(operand2.Value) : new Operand(operand2.SubType == TokenSubType.HexNumber ? H.parseHex(operand2.Value) : H.parseRome(operand2.Value));
+
+            Tetrad logic;
+            switch (operation.SubType)
+            {
+                case TokenSubType.Less:
+                    logic = new Tetrad(OperationType.LESS, op1, op2);
+                    break;
+                case TokenSubType.More:
+                    logic = new Tetrad(OperationType.MORE, op1, op2);
+                    break;
+                case TokenSubType.Equal:
+                    logic = new Tetrad(OperationType.EQUAL, op1, op2);
+                    break;
+                default:
+                    logic = null;
+                    break;
+            }
+            return TetradManager.Add(logic);
         }
         
-        static void Assign(SyntaxTree parentTree)
+        static void Assign()
         {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Assign);
-            parentTree.Add(current);
-            Operand op1 = new Operand(current.Add(Eat(TokenType.Identifier)).Value);
-            current.Add(Eat(TokenType.Assign));            
-            Operand op2 = Sum(current);
+            Operand op1 = new Operand(Eat(TokenType.Identifier).Value);
+            Eat(TokenType.Assign);            
+            Operand op2 = Sum();
             Eat(TokenType.Delimitier);
             TetradManager.Add(new Tetrad(OperationType.ASSIGN, op1.Clone(), op2.Clone()));
         }        
 
-        static Operand Sum(SyntaxTree parentTree)
+        static Operand Sum()
         {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Sum);
-            parentTree.Add(current);
-            Operand op1 = Mul(current);
+            Operand op1 = Mul();
             while(Peek.SubType == TokenSubType.Add)
             {                
                 OperationType operation = Peek.Value=="+"?OperationType.ADD:OperationType.SUB;
-                current.Add(Eat(TokenType.Operation));
-                Operand op2 = Mul(current);
+                Eat(TokenType.Operation);
+                Operand op2 = Mul();
                 Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone());
                 TetradManager.Add(t);
                 op1.Set(t);
             }
             return op1;
         }
-        static Operand Mul(SyntaxTree parentTree)
+        static Operand Mul()
         {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Mul);
-            parentTree.Add(current);
-            Operand op1 = Atom(current);
+            Operand op1 = Atom();
             while(Peek.SubType == TokenSubType.Mul)
             {
                 OperationType operation = Peek.Value == "*" ? OperationType.MUL : OperationType.DIV;
-                current.Add(Eat(TokenType.Operation));
-                Operand op2 = Atom(current);
+                Eat(TokenType.Operation);
+                Operand op2 = Atom();
                 Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone());
                 TetradManager.Add(t);
                 op1.Set(t);
             }
             return op1;
         }
-        static Operand Atom(SyntaxTree parentTree)
+        static Operand Atom()
         {
-            SyntaxTree current = new SyntaxTree(SyntaxTreeType.Atom);
-            parentTree.Add(current);
             Token d = Get;
             Operand op = new Operand();
             if (d.Type != TokenType.Identifier && d.Type != TokenType.Number)
             {
                 if (d.Type == TokenType.OpenBracket)
                 {
-                    op = Sum(current);
+                    op = Sum();
                     Eat(TokenType.CloseBracket);
                 }
                 else
                     throw new ErrorException("Неожиданный символ D: " + d.Value, d, ErrorType.SyntaxError);
             }
             else
-            {
-                current.Add(d);
+            {                
                 if (d.Type == TokenType.Identifier)
                     op = new Operand(d.Value);
                 else
