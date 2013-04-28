@@ -50,11 +50,9 @@ namespace SwarthyStudio
                 case "while":
                     type = TokenType.While;
                     break;
-                case "read":
-                    type = TokenType.Read;
-                    break;
-                case "write":
-                    type = TokenType.Write;
+                default:
+                    if (FunctionManager.isFunction(s))
+                        type = TokenType.Function;
                     break;
             }
             bool isHex = true, isRome = true;
@@ -71,7 +69,7 @@ namespace SwarthyStudio
                 type = TokenType.Number;                
             else
                 if (char.IsDigit(s[0]))
-                    throw new ErrorException("Идентификатор не может начинаться с цифры", pos-s.Length, line, ErrorType.LexicalError);
+                    throw new ErrorException("Идентификатор/функция не может начинаться с цифры", pos-s.Length, line, ErrorType.LexicalError);
             
             subType = isHex ? TokenSubType.HexNumber : isRome ? TokenSubType.RomeNumber : TokenSubType.None;            
             return new Token(s, type, subType,pos-s.Length,line,s.Length);                 

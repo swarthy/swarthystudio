@@ -7,6 +7,10 @@ namespace SwarthyStudio
 {
     static public class TetradManager
     {
+        public static string AssemblerCode = "";
+        #region НачалоКода
+        //public static string 
+        #endregion
         internal static List<Tetrad> list = new List<Tetrad>();        
         static Tetrad currentTetrad;
         static public void Initialize()
@@ -22,6 +26,7 @@ namespace SwarthyStudio
         
         static public void BeginSolve()
         {
+            AssemblerCode = "";
             currentTetrad = list.First();
             bool needIncrease;
             while (currentTetrad != null)
@@ -41,7 +46,7 @@ namespace SwarthyStudio
                     case OperationType.DIV:
                         currentTetrad.Result = currentTetrad.Operand1.Value / currentTetrad.Operand2.Value;
                         break;
-                    case OperationType.MORE:
+                    case OperationType.GREATER:
                         currentTetrad.Result = currentTetrad.Operand1.Value > currentTetrad.Operand2.Value ? 1 : 0;
                         break;
                     case OperationType.LESS:
@@ -126,6 +131,7 @@ namespace SwarthyStudio
         OperandType type = OperandType.Constant;
         Tetrad tetrad;
         Variable var;
+        sFunction func;
         int constant=0;
         public OperandType Type
         { get { return type; } }
@@ -155,6 +161,11 @@ namespace SwarthyStudio
         {
             this.var = var;
             type = OperandType.Variable;
+        }
+        public Operand(sFunction func)
+        {
+            this.func = func;
+            type = OperandType.Function;
         }
         public Operand(string existVariableName)
         {
@@ -212,6 +223,11 @@ namespace SwarthyStudio
             this.constant = constant;
             type = OperandType.Constant;
         }
+        public void Set(sFunction func)
+        {
+            this.func = func;
+            type = OperandType.Function;
+        }
         public override string ToString()
         {
             switch (Type)
@@ -224,6 +240,9 @@ namespace SwarthyStudio
                     break;
                 case OperandType.Tetrad:
                     return string.Format("^{0}",TetradManager.list.IndexOf(tetrad));
+                    break;
+                case OperandType.Function:
+                    return func.Execute();
                     break;
                 default:
                     return "[unknown operand type]";
@@ -242,6 +261,9 @@ namespace SwarthyStudio
                 case OperandType.Variable:
                     return new Operand(var);
                     break;
+                case OperandType.Function:
+                    return new Operand(func);
+                    break;
                 default:
                     return null;
             }            
@@ -249,10 +271,10 @@ namespace SwarthyStudio
     }    
     internal enum OperandType
     {
-        Constant, Variable, Tetrad
+        Constant, Variable, Tetrad, Function
     }
     internal enum OperationType
     {
-        ADD, SUB, MUL, DIV, ASSIGN, IF, WRITE, READ, MORE, LESS, EQUAL, MARK, GOTO
+        ADD, SUB, MUL, DIV, ASSIGN, IF, WRITE, READ, GREATER, LESS, EQUAL, MARK, GOTO
     }    
 }

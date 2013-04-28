@@ -40,6 +40,9 @@ namespace SwarthyStudio
                         currentVisibility.FindOrCreate(Peek.Value, 0);
                         Assign();                        
                         break;
+                    case TokenType.Function:
+                        FunctionCall(Eat(TokenType.Function));
+                        break;
                     case TokenType.If:
                         If();
                         break;
@@ -64,7 +67,7 @@ namespace SwarthyStudio
             currentVisibility = currentVisibility.parentVisibility;//возвращаемся в родительскую область видимости
             return old;
         }
-
+        #region Циклические конструкции/Ветвление
         static void If()
         {            
             /*             (more, a, b)
@@ -154,7 +157,7 @@ namespace SwarthyStudio
                     logic = new Tetrad(OperationType.LESS, op1, op2);
                     break;
                 case TokenSubType.More:
-                    logic = new Tetrad(OperationType.MORE, op1, op2);
+                    logic = new Tetrad(OperationType.GREATER, op1, op2);
                     break;
                 case TokenSubType.Equal:
                     logic = new Tetrad(OperationType.EQUAL, op1, op2);
@@ -167,7 +170,37 @@ namespace SwarthyStudio
                 currentVisibility = currentVisibility.parentVisibility;
             return TetradManager.Add(logic);
         }
-        
+        #endregion
+
+        static Operand FunctionCall(Token fToken)
+        {
+            Operand op;             
+            List<sFunction> funcs = FunctionManager.GetAllByName(fToken.Value);
+            Eat(TokenType.OpenBracket);            
+            op = new Operand(FunctionParams(funcs));
+            Eat(TokenType.CloseBracket);
+            return op;
+        }
+
+        static sFunction FunctionParams(List<sFunction> funcs)
+        {
+            //select sFunction funcs 
+            List<TokenType> paramsTypes = new List<TokenType>();
+            paramsTypes.Add(Eat(TokenType.StringConstant, TokenType.Identifier, TokenType.Number).Type);
+            while (Peek.Type == TokenType.Comma)
+            {
+                Eat(TokenType.Comma);
+                paramsTypes.Add(Eat(TokenType.StringConstant, TokenType.Identifier, TokenType.Number).Type);
+            }
+            foreach (sFunction f in funcs)
+            {
+                if (f.isMyParams(paramsTypes.ToArray()))
+                    return f;
+            }
+            throw new ErrorException("Нет функции с такими параметрами",ErrorType.SemanticError);
+            return null;
+        }
+
         static void Assign()
         {
             Operand op1 = new Operand(Eat(TokenType.Identifier).Value);
@@ -192,6 +225,7 @@ namespace SwarthyStudio
             }
             return op1;
         }
+
         static Operand Mul()
         {
             Operand op1 = Atom();
@@ -206,26 +240,30 @@ namespace SwarthyStudio
             }
             return op1;
         }
+
         static Operand Atom()
         {
             Token d = Get;
             Operand op = new Operand();
-            if (d.Type != TokenType.Identifier && d.Type != TokenType.Number)
+
+            switch (d.Type)
             {
-                if (d.Type == TokenType.OpenBracket)
-                {
+                case TokenType.Identifier:
+                    op = new Operand(d.Value);
+                    break;
+                case TokenType.Number:
+                    op = new Operand(d.SubType==TokenSubType.HexNumber?H.parseHex(d.Value):H.parseRome(d.Value));
+                    break;
+                case TokenType.Function:
+                    op = FunctionCall(d);
+                    break;
+                case TokenType.OpenBracket:
                     op = Sum();
                     Eat(TokenType.CloseBracket);
-                }
-                else
+                    break;
+                default:
                     throw new ErrorException("Неожиданный символ D: " + d.Value, d, ErrorType.SyntaxError);
-            }
-            else
-            {                
-                if (d.Type == TokenType.Identifier)
-                    op = new Operand(d.Value);
-                else
-                    op = new Operand(d.SubType==TokenSubType.HexNumber?H.parseHex(d.Value):H.parseRome(d.Value));
+                    break;
             }
             return op;
         }
@@ -237,6 +275,7 @@ namespace SwarthyStudio
             else
                 return t;
         }
+
         static Token Peek
         {
             get
@@ -265,6 +304,7 @@ namespace SwarthyStudio
             return t;
         }
     }
+
     class Visibility
     {
         public static Visibility GLOBAL = null;
@@ -305,12 +345,8 @@ namespace SwarthyStudio
                 return newV;
             }
         }
-        public void FreeAllVariables()
-        {
-            foreach (Variable v in variables)
-                SyntaxAnalyzer.Variables.Remove(v.name);
-        }
     }
+
     class Variable
     {        
         public string name;
