@@ -8,6 +8,7 @@ namespace SwarthyStudio
     static class LexicalAnalyzer
     {
         public static List<Token> Lexems { get; private set; }
+        public static List<string> StringConstants = new List<string>();
         static List<Transition> Transitions = new List<Transition>();
         static States currentState = States.Start;
 
@@ -81,6 +82,9 @@ namespace SwarthyStudio
                                 case '~':
                                     postEvent(Events.Equal, c, pos, line);
                                     break;
+                                case '#':
+                                    postEvent(Events.NotEqual, c, pos, line);
+                                    break;
                                 case '"':
                                     postEvent(Events.Quote, c, pos, line);
                                     break;
@@ -102,7 +106,8 @@ namespace SwarthyStudio
             buffer = "";
             currentState = States.Start;
             Lexems.Clear();
-        }
+            StringConstants.Clear();
+        }        
         public static void Initialize()
         {
             FunctionManager.Initialize();
@@ -119,10 +124,11 @@ namespace SwarthyStudio
             Transitions.Add(new Transition(States.Start, Events.More, States.Start, (c, pos, line) => { AddToken(c, TokenType.Compare, TokenSubType.More, pos, line); }));
             Transitions.Add(new Transition(States.Start, Events.Less, States.Start, (c, pos, line) => { AddToken(c, TokenType.Compare, TokenSubType.Less, pos, line); }));
             Transitions.Add(new Transition(States.Start, Events.Equal, States.Start, (c, pos, line) => { AddToken(c, TokenType.Compare, TokenSubType.Equal, pos, line); }));
-            Transitions.Add(new Transition(States.Start, Events.Quote, States.StringConst, (c, pos, line) => {}));
+            Transitions.Add(new Transition(States.Start, Events.NotEqual, States.Start, (c, pos, line) => { AddToken(c, TokenType.Compare, TokenSubType.NotEqual, pos, line); }));
+            Transitions.Add(new Transition(States.Start, Events.Quote, States.StringConst, (c, pos, line) => { AddToken(c, TokenType.Quote, TokenSubType.Equal, pos, line); }));
             Transitions.Add(new Transition(States.Start, Events.newLine, States.Start, (c, pos, line) => { }));
             Transitions.Add(new Transition(States.Start, Events.Space, States.Start, (c, pos, line) => { }));
-            Transitions.Add(new Transition(States.Start, Events.Comma, States.Start, (c, pos, line) => { }));
+            Transitions.Add(new Transition(States.Start, Events.Comma, States.Start, (c, pos, line) => { AddToken(c, TokenType.Comma, TokenSubType.Equal, pos, line); }));
 
             Transitions.Add(new Transition(States.Identified, Events.Symbol, States.Identified, (c, pos, line) => { buffer += c; }));
             Transitions.Add(new Transition(States.Identified, Events.Delimiter, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Delimitier, pos, line); }));
@@ -135,9 +141,11 @@ namespace SwarthyStudio
             Transitions.Add(new Transition(States.Identified, Events.More, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Compare, TokenSubType.More, pos, line); }));
             Transitions.Add(new Transition(States.Identified, Events.Less, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Compare, TokenSubType.Less, pos, line); }));
             Transitions.Add(new Transition(States.Identified, Events.Equal, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Compare, TokenSubType.Equal, pos, line); }));
+            Transitions.Add(new Transition(States.Identified, Events.NotEqual, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Compare, TokenSubType.NotEqual, pos, line); }));
             Transitions.Add(new Transition(States.Identified, Events.Comma, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Comma, TokenSubType.None, pos, line); }));
+            Transitions.Add(new Transition(States.Identified, Events.Quote, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Quote, TokenSubType.None, pos, line); }));            
             Transitions.Add(new Transition(States.Identified, Events.EOS, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.EOS, pos, line); }));
-            Transitions.Add(new Transition(States.Identified, Events.newLine, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); }));
+            Transitions.Add(new Transition(States.Identified, Events.newLine, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); }));            
             Transitions.Add(new Transition(States.Identified, Events.Space, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); }));
 
             #region события для строковой константы (удалить)
@@ -158,7 +166,7 @@ namespace SwarthyStudio
             #endregion
 
             Transitions.Add(new Transition(States.StringConst, Events.newLine, States.Start, (c, pos, line) => { Err("Неверное определение для строковой константы", pos, line, ErrorType.LexicalError); }));
-            Transitions.Add(new Transition(States.StringConst, Events.Quote, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.StringConstant, TokenSubType.None, pos, line); }));
+            Transitions.Add(new Transition(States.StringConst, Events.Quote, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.StringConstant, TokenSubType.None, pos, line); AddToken(c, TokenType.Quote, TokenSubType.None, pos, line); }));
             Transitions.Add(new Transition(States.StringConst, Events.Any, States.StringConst, (c, pos, line) => { buffer += c; }));
 
         }
@@ -171,7 +179,8 @@ namespace SwarthyStudio
                     Lexems.Add(H.parseIdentifier(value,pos,line));
                 else                    
                     Lexems.Add(new Token(value, type, subType,pos,line,1));
-
+            if (type == TokenType.StringConstant)
+                StringConstants.Add(buffer);
             if (type == TokenType.Identifier || type == TokenType.StringConstant)
                 buffer = "";
         }
@@ -352,7 +361,7 @@ namespace SwarthyStudio
     }
     enum TokenSubType
     {
-        Add, Mul, Write, Read, None, Less, More, Equal, RomeNumber, HexNumber
+        Add, Mul, Write, Read, None, Less, More, Equal, NotEqual, RomeNumber, HexNumber
     }
     enum TokenType
     {
@@ -367,6 +376,7 @@ namespace SwarthyStudio
         CloseCurlyBracket,
         Delimitier,
         Comma,
+        Quote,
         If,
         Else,
         While,
@@ -383,7 +393,7 @@ namespace SwarthyStudio
         Quote,
         Comma,
         Space,
-        Delimiter, Operation, Assign, OpenBracket, CloseBracket, OpenCurlyBracket, CloseCurlyBracket, EOS, Less, More, Equal, newLine, Any
+        Delimiter, Operation, Assign, OpenBracket, CloseBracket, OpenCurlyBracket, CloseCurlyBracket, EOS, Less, More, Equal, NotEqual, newLine, Any
     }
     #endregion
     #region Состояния

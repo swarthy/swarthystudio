@@ -8,7 +8,7 @@ namespace SwarthyStudio
     static class SyntaxAnalyzer
     {        
         private static List<Token> tokens;
-        public static Dictionary<string, int> Variables = new Dictionary<string, int>();
+        public static List<Variable> Variables = new List<Variable>();
         public static Visibility currentVisibility = null;        
         static public void Initialize()
         {
@@ -36,12 +36,13 @@ namespace SwarthyStudio
             {
                 switch (Peek.Type)
                 {
-                    case TokenType.Identifier:
-                        currentVisibility.FindOrCreate(Peek.Value, 0);
+                    case TokenType.Identifier:                        
                         Assign();                        
                         break;
                     case TokenType.Function:
-                        FunctionCall(Eat(TokenType.Function));
+                        TetradManager.Add(new Tetrad(OperationType.FUNCTIONCALL, FunctionCall(Eat(TokenType.Function), FunctionReturnType.Void), null));
+                        if (Peek.Type == TokenType.Delimitier)
+                            Eat(TokenType.Delimitier);
                         break;
                     case TokenType.If:
                         If();
@@ -91,9 +92,9 @@ namespace SwarthyStudio
             Statement();
 
             if (Peek.Type == TokenType.Else)
-                TetradManager.Add(goTo);            
+                TetradManager.Add(goTo);
 
-            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
+            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));            
                         
             if (Peek.Type == TokenType.Else)
             {
@@ -144,11 +145,13 @@ namespace SwarthyStudio
             if (exists!=null)
                 currentVisibility = exists;
             Operand op1, op2;
-            Token operand1 = DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number));
-            op1 = operand1.Type == TokenType.Identifier ? new Operand(operand1.Value) : new Operand(operand1.SubType == TokenSubType.HexNumber ? H.parseHex(operand1.Value) : H.parseRome(operand1.Value));
-            Token operation = Eat(TokenType.Compare);            
-            Token operand2 = DeclarationCheck(Eat(TokenType.Identifier, TokenType.Number));
-            op2 = operand2.Type == TokenType.Identifier ? new Operand(operand2.Value) : new Operand(operand2.SubType == TokenSubType.HexNumber ? H.parseHex(operand2.Value) : H.parseRome(operand2.Value));
+            Token operand1 = Eat(TokenType.Identifier, TokenType.Number); // a       
+            op1 = operand1.Type == TokenType.Identifier ? new Operand(DeclarationCheck(operand1)) : new Operand(operand1.SubType == TokenSubType.HexNumber ? H.parseHex(operand1.Value) : H.parseRome(operand1.Value));
+
+            Token operation = Eat(TokenType.Compare);            // = 
+
+            Token operand2 = Eat(TokenType.Identifier, TokenType.Number); // b
+            op2 = operand2.Type == TokenType.Identifier ? new Operand(DeclarationCheck(operand2)) : new Operand(operand2.SubType == TokenSubType.HexNumber ? H.parseHex(operand2.Value) : H.parseRome(operand2.Value));
 
             Tetrad logic;
             switch (operation.SubType)
@@ -172,38 +175,66 @@ namespace SwarthyStudio
         }
         #endregion
 
-        static Operand FunctionCall(Token fToken)
+        static Operand FunctionCall(Token fToken, params FunctionReturnType[] validReturnTypes)
         {
-            Operand op;             
+            sFunction func = null;
             List<sFunction> funcs = FunctionManager.GetAllByName(fToken.Value);
-            Eat(TokenType.OpenBracket);            
-            op = new Operand(FunctionParams(funcs));
+            Eat(TokenType.OpenBracket);
+            List<Parameter> parametres = FunctionParams();
+            foreach (sFunction f in funcs)
+            {
+                if (f.isMyParams(parametres, validReturnTypes))
+                {
+                    func = f;
+                    break;
+                }
+            }
+            if (func==null)
+                throw new ErrorException(string.Format("Функция {0} не поддерживает такой набор параметров, для случая, когда необходимо вернуть {1}",funcs[0].Name,validReturnTypes.Select(vt=>vt.ToString()).Aggregate((i,j)=>i+", "+j)), ErrorType.SemanticError);
+            //if (!validReturnTypes.Contains(func.ReturnType))
+                //throw new ErrorException(string.Format("Функция {0} возвращает значение {1}, а ожидается {2}",func.Name,func.ReturnType,validReturnTypes.Select(vt=>vt.ToString()).Aggregate((i,j)=>i+", "+j)), ErrorType.SemanticError);
+            Operand op = new Operand(func.Execute(parametres));
             Eat(TokenType.CloseBracket);
             return op;
         }
 
-        static sFunction FunctionParams(List<sFunction> funcs)
+        static List<Parameter> FunctionParams()
         {
-            //select sFunction funcs 
-            List<TokenType> paramsTypes = new List<TokenType>();
-            paramsTypes.Add(Eat(TokenType.StringConstant, TokenType.Identifier, TokenType.Number).Type);
-            while (Peek.Type == TokenType.Comma)
+            List<Parameter> parametres = new List<Parameter>();
+            while (Peek.Type != TokenType.CloseBracket)
             {
-                Eat(TokenType.Comma);
-                paramsTypes.Add(Eat(TokenType.StringConstant, TokenType.Identifier, TokenType.Number).Type);
+                if (Peek.Type == TokenType.Quote)// "
+                    Eat(TokenType.Quote);
+                Token p = Eat(TokenType.StringConstant, TokenType.Identifier, TokenType.Number);                
+                switch (p.Type)
+                {
+                    case TokenType.StringConstant:
+                        parametres.Add(new Parameter(LexicalAnalyzer.StringConstants.IndexOf(p.Value)));
+                        break;
+                    case TokenType.Identifier:
+                        DeclarationCheck(p);
+                        parametres.Add(new Parameter(currentVisibility.Find(p.Value)));
+                        break;
+                    case TokenType.Number:
+                        parametres.Add(new Parameter(p.Value, p.GetNumValue));
+                        break;
+                }
+                //parametres.Add(p);
+                if (Peek.Type == TokenType.Quote)// "
+                    Eat(TokenType.Quote);
+                if (Peek.Type == TokenType.Comma)
+                {
+                    Eat(TokenType.Comma);
+                    if (Peek.Type == TokenType.CloseBracket)
+                        throw new ErrorException("Неверное определение параметров", Peek, ErrorType.SyntaxError);
+                }
             }
-            foreach (sFunction f in funcs)
-            {
-                if (f.isMyParams(paramsTypes.ToArray()))
-                    return f;
-            }
-            throw new ErrorException("Нет функции с такими параметрами",ErrorType.SemanticError);
-            return null;
+            return parametres;            
         }
 
         static void Assign()
-        {
-            Operand op1 = new Operand(Eat(TokenType.Identifier).Value);
+        {            
+            Operand op1 = new Operand(currentVisibility.FindOrCreate(Eat(TokenType.Identifier).Value));
             Eat(TokenType.Assign);            
             Operand op2 = Sum();
             if (Peek.Type==TokenType.Delimitier)
@@ -248,14 +279,14 @@ namespace SwarthyStudio
 
             switch (d.Type)
             {
-                case TokenType.Identifier:
-                    op = new Operand(d.Value);
+                case TokenType.Identifier:                    
+                    op = new Operand(DeclarationCheck(d));
                     break;
                 case TokenType.Number:
                     op = new Operand(d.SubType==TokenSubType.HexNumber?H.parseHex(d.Value):H.parseRome(d.Value));
                     break;
                 case TokenType.Function:
-                    op = FunctionCall(d);
+                    op = FunctionCall(d, FunctionReturnType.Number);
                     break;
                 case TokenType.OpenBracket:
                     op = Sum();
@@ -268,12 +299,13 @@ namespace SwarthyStudio
             return op;
         }
         
-        static Token DeclarationCheck(Token t)
+        static Variable DeclarationCheck(Token t)
         {
-            if (t.Type == TokenType.Identifier && currentVisibility.Find(t.Value) == null)
+            Variable v = currentVisibility.Find(t.Value);
+            if (t.Type == TokenType.Identifier && v == null)
                 throw new ErrorException("Использование ранее необъявленной переменной", t, ErrorType.SyntaxError);
             else
-                return t;
+                return v;
         }
 
         static Token Peek
@@ -323,25 +355,22 @@ namespace SwarthyStudio
         public Variable Find(string s)
         {
             foreach (Variable v in variables)
-                if (v.name == s)
+                if (v.Name == s)
                     return v;
             if (parentVisibility == null)
                 return null;
             return parentVisibility.Find(s);
         }
-        public Variable FindOrCreate(string s, int val)
+        public Variable FindOrCreate(string s)
         {
             Variable v = Find(s);
-            if (v != null)
-            {
-                v.Value = val;
-                return v;
-            }
+            if (v != null)                            
+                return v;            
             else
-            {
-                SyntaxAnalyzer.Variables[s] = val;
+            {                
                 Variable newV = new Variable(s);
-                variables.Add(newV);
+                SyntaxAnalyzer.Variables.Add(newV);
+                variables.Add(newV);                
                 return newV;
             }
         }
@@ -349,7 +378,14 @@ namespace SwarthyStudio
 
     class Variable
     {        
-        public string name;
+        string name;
+        public string Name
+        {
+            get
+            {
+                return name;
+            }
+        }
         public Variable()
         {
         }
@@ -357,18 +393,11 @@ namespace SwarthyStudio
         {
             this.name = name;            
         }
-        public int Value
+        public int IndexInList
         {
             get
             {
-                if (SyntaxAnalyzer.Variables.Keys.Contains(name))
-                    return SyntaxAnalyzer.Variables[name];
-                else
-                    throw new ErrorException("Обращение к ранее не объявленной переменной \""+name+"\"", ErrorType.SemanticError);
-            }
-            set
-            {
-                SyntaxAnalyzer.Variables[name] = value;
+                return SyntaxAnalyzer.Variables.IndexOf(this);
             }
         }
     }
