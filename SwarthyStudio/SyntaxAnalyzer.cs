@@ -14,7 +14,7 @@ namespace SwarthyStudio
         {
             
         }
-        
+        static int dynPos = 0;
         public static void Process()
         {
             tokens = LexicalAnalyzer.Lexems.ToList();//DEBUG: копируем список, в release версии - передать по ссылке
@@ -83,9 +83,12 @@ namespace SwarthyStudio
             
             Eat(TokenType.If);
             Eat(TokenType.OpenBracket);
-            Operand logic = new Operand(LogicalExpression());
-            Tetrad iftetrad = new Tetrad(OperationType.IF, logic, null), goTo = new Tetrad(OperationType.GOTO, null, null);
+            Tetrad iftetrad = LogicalExpression();            
+            Tetrad logic = new Tetrad(iftetrad.Operation, new Operand(iftetrad), null),            
+                   goTo = new Tetrad(OperationType.GOTO, null, null);
+            iftetrad.Operation = OperationType.IF;
             TetradManager.Add(iftetrad);
+            TetradManager.Add(logic);
             
             Eat(TokenType.CloseBracket);
 
@@ -94,7 +97,7 @@ namespace SwarthyStudio
             if (Peek.Type == TokenType.Else)
                 TetradManager.Add(goTo);
 
-            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));            
+            logic.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));            
                         
             if (Peek.Type == TokenType.Else)
             {
@@ -108,16 +111,18 @@ namespace SwarthyStudio
         {
             Eat(TokenType.While);
             Eat(TokenType.OpenBracket);
-            Operand logic = new Operand(LogicalExpression());
-            Tetrad iftetrad = new Tetrad(OperationType.IF, logic, null), goTo = new Tetrad(OperationType.GOTO, new Operand(iftetrad), null);
+            Tetrad iftetrad = LogicalExpression();
+            Tetrad logic = new Tetrad(iftetrad.Operation, new Operand(iftetrad), null);
+            iftetrad.Operation = OperationType.IF;
+
             TetradManager.Add(iftetrad);
+            TetradManager.Add(logic);
 
             Eat(TokenType.CloseBracket);
 
             Statement();
-
-            TetradManager.Add(goTo);//после тела цикла - проверяем условие
-            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));//точка выхода
+            TetradManager.Add(new Tetrad(OperationType.GOTO, new Operand(iftetrad), null));
+            logic.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
         }
 
         static void For()
@@ -125,19 +130,27 @@ namespace SwarthyStudio
             Eat(TokenType.For);
             Eat(TokenType.OpenBracket);  //for(statement;logic;statement)
             Visibility forVis = Statement();
-            Operand logic = new Operand(LogicalExpression(forVis));
+            //Operand logic = new Operand(LogicalExpression(forVis));
+            Tetrad iftetrad = LogicalExpression(forVis);
             Eat(TokenType.Delimitier);
 
-            Tetrad iftetrad = new Tetrad(OperationType.IF, logic, null), goTo = new Tetrad(OperationType.GOTO, new Operand(iftetrad), null);
-            TetradManager.Add(iftetrad);  
+            
+            Tetrad logic = new Tetrad(iftetrad.Operation, new Operand(iftetrad), null);
+            iftetrad.Operation = OperationType.IF;
+
+
+            Tetrad goTo = new Tetrad(OperationType.GOTO, new Operand(iftetrad), null);
+            TetradManager.Add(iftetrad);
+            TetradManager.Add(logic);
 
             Statement(forVis);
+
             Eat(TokenType.CloseBracket);
             
             Statement(forVis);
 
             TetradManager.Add(goTo);//после тела цикла - проверяем условие
-            iftetrad.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));//точка выхода
+            logic.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));//точка выхода
         }
 
         static Tetrad LogicalExpression(Visibility exists = null)
@@ -165,13 +178,16 @@ namespace SwarthyStudio
                 case TokenSubType.Equal:
                     logic = new Tetrad(OperationType.EQUAL, op1, op2);
                     break;
+                case TokenSubType.NotEqual:
+                    logic = new Tetrad(OperationType.NOTEQUAL, op1, op2);
+                    break;
                 default:
                     logic = null;
                     break;
             }
             if (exists != null)
                 currentVisibility = currentVisibility.parentVisibility;
-            return TetradManager.Add(logic);
+            return logic;
         }
         #endregion
 
@@ -235,11 +251,18 @@ namespace SwarthyStudio
         static void Assign()
         {            
             Operand op1 = new Operand(currentVisibility.FindOrCreate(Eat(TokenType.Identifier).Value));
-            Eat(TokenType.Assign);            
-            Operand op2 = Sum();
+            Eat(TokenType.Assign);
+            Operand memSize = new Operand(0);
+            TetradManager.Add(new Tetrad(OperationType.ALLOCMEM, memSize, null));
+            int prevTetradCount = TetradManager.list.Count;
+            dynPos = 0;
+            Operand op2 = Sum();            
             if (Peek.Type==TokenType.Delimitier)
                 Eat(TokenType.Delimitier);
+            memSize.Constant = TetradManager.list.Count - prevTetradCount;
             TetradManager.Add(new Tetrad(OperationType.ASSIGN, op1.Clone(), op2.Clone()));
+            if (memSize.Constant>0)
+                TetradManager.Add(new Tetrad(OperationType.FREEMEM, null, null));
         }        
 
         static Operand Sum()
@@ -250,7 +273,7 @@ namespace SwarthyStudio
                 OperationType operation = Peek.Value=="+"?OperationType.ADD:OperationType.SUB;
                 Eat(TokenType.Operation);
                 Operand op2 = Mul();
-                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone());
+                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone(), dynPos++);
                 TetradManager.Add(t);
                 op1.Set(t);
             }
@@ -265,7 +288,7 @@ namespace SwarthyStudio
                 OperationType operation = Peek.Value == "*" ? OperationType.MUL : OperationType.DIV;
                 Eat(TokenType.Operation);
                 Operand op2 = Atom();
-                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone());
+                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone(), dynPos++);
                 TetradManager.Add(t);
                 op1.Set(t);
             }

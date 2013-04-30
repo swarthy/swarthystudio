@@ -180,7 +180,10 @@ namespace SwarthyStudio
                 else                    
                     Lexems.Add(new Token(value, type, subType,pos,line,1));
             if (type == TokenType.StringConstant)
-                StringConstants.Add(buffer);
+                if (value == "")
+                    throw new ErrorException("Строковая константа не может быть пустой",pos,line,ErrorType.SemanticError);
+                else
+                    StringConstants.Add(buffer);
             if (type == TokenType.Identifier || type == TokenType.StringConstant)
                 buffer = "";
         }

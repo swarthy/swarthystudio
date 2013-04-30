@@ -16,9 +16,14 @@ namespace SwarthyStudio
         {
             Add(new sFunction("read", FunctionReturnType.Number, prms => { return string.Format("FUNC(atol, input(\"{0}\"))", prms[0].StrValue); }, ParameterType.StringConstant));
             Add(new sFunction("read", FunctionReturnType.Void, prms => { return string.Format("inkey \"{0}\"", prms[0].StrValue); }, ParameterType.StringConstant));
-            Add(new sFunction("write", FunctionReturnType.Void, prms => { return string.Format("print \"{0}\"", prms[0].StrValue); }, ParameterType.StringConstant));
-            Add(new sFunction("write", FunctionReturnType.Void, prms => { return string.Format("print str$(Variables[{0}*4])", prms[0].intValue); }, ParameterType.Variable));
-            Add(new sFunction("write", FunctionReturnType.Void, prms => { return string.Format("print \"{0}\"", prms[0].intValue); }, ParameterType.NumericConstant));            
+            Add(new sFunction("read", FunctionReturnType.Void, prms => { return "inkey NULL"; }));
+            Add(new sFunction("write", FunctionReturnType.Void, prms => { return string.Format("invoke StdOut,ADDR strConst{0}", prms[0].intValue); }, ParameterType.StringConstant));
+            Add(new sFunction("write", FunctionReturnType.Void, prms => { return string.Format("print str$(variables[{0}*4])", prms[0].intValue); }, ParameterType.Variable));
+            Add(new sFunction("write", FunctionReturnType.Void, prms => { return string.Format("print \"{0}\"", prms[0].intValue); }, ParameterType.NumericConstant));
+
+            Add(new sFunction("writeln", FunctionReturnType.Void, prms => { return string.Format("invoke StdOut,ADDR strConst{0}\r\ninvoke StdOut,ADDR nl", prms[0].intValue); }, ParameterType.StringConstant));
+            Add(new sFunction("writeln", FunctionReturnType.Void, prms => { return string.Format("print str$(variables[{0}*4]),13,10", prms[0].intValue); }, ParameterType.Variable));
+            Add(new sFunction("writeln", FunctionReturnType.Void, prms => { return string.Format("print \"{0}\",13,10", prms[0].intValue); }, ParameterType.NumericConstant));            
         }
         public static FunctionReturnType GetFuncTypeByName(string name)
         {
@@ -158,7 +163,7 @@ namespace SwarthyStudio
                         return numValue;
                         break;
                     case ParameterType.StringConstant:
-                        return 0;
+                        return indexInConstantList;
                         break;
                     case ParameterType.Variable:
                         return variable.IndexInList;

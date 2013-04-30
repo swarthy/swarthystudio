@@ -22,77 +22,71 @@ namespace SwarthyStudio
         
         static public void BeginSolve()
         {            
-            currentTetrad = list.First();
-            bool needIncrease;
-            while (currentTetrad != null)
-            {
-                needIncrease = true;
-                switch (currentTetrad.Operation)
+            foreach(Tetrad t in list)
+            {                
+                switch (t.Operation)
                 {
-                    case OperationType.ADD:
-                        currentTetrad.Result = currentTetrad.Operand1.Value + currentTetrad.Operand2.Value;                        
+                    case OperationType.ALLOCMEM:
+                        if (t.Operand1.Constant>0)
+                            CodeGenerator.Add(string.Format("lbl{1}: mov tempBuffer, alloc({0}*4)",t.Operand1.Constant,t.indexInList));
                         break;
-                    case OperationType.SUB:
-                        currentTetrad.Result = currentTetrad.Operand1.Value - currentTetrad.Operand2.Value;                        
-                        break;
-                    case OperationType.MUL:
-                        currentTetrad.Result = currentTetrad.Operand1.Value * currentTetrad.Operand2.Value;
-                        break;
-                    case OperationType.DIV:
-                        currentTetrad.Result = currentTetrad.Operand1.Value / currentTetrad.Operand2.Value;
-                        break;
-                    case OperationType.GREATER:
-                        currentTetrad.Result = currentTetrad.Operand1.Value > currentTetrad.Operand2.Value ? 1 : 0;
-                        break;
-                    case OperationType.LESS:
-                        currentTetrad.Result = currentTetrad.Operand1.Value < currentTetrad.Operand2.Value ? 1 : 0;
-                        break;
-                    case OperationType.EQUAL:
-                        currentTetrad.Result = currentTetrad.Operand1.Value == currentTetrad.Operand2.Value ? 1 : 0;
-                        break;
-                    case OperationType.IF:
-                        if (currentTetrad.Operand1.Value == 1)//operand1 == true
-                        {
-
-                        }
-                        else
-                        {
-                            if (currentTetrad.Operand2.Tetrad == null)
-                                throw new ErrorException("Переход из if в тетраду которая null", ErrorType.InternalError);                            
-                            goTo(currentTetrad.Operand2.Tetrad);
-                            needIncrease = false;
-                            break;
-                        }
-                        break;
-                    case OperationType.ASSIGN:
-                        //currentTetrad.Operand1.Variable.Value = currentTetrad.Operand2.Value;
-                        break;
-                    case OperationType.MARK://просто тетрада-метка, ничего не делает. нужна в if/if-else для упрощения передачи управления
+                    case OperationType.FREEMEM:
+                        CodeGenerator.Add(string.Format("lbl{0}: free([tempBuffer])",t.indexInList));
                         break;
                     case OperationType.GOTO:
-                        goTo(currentTetrad.Operand1.Tetrad);
+                        CodeGenerator.Add(string.Format("lbl{1}: jmp lbl{0}",t.Operand1.Tetrad.indexInList,t.indexInList));
                         break;
+                    case OperationType.ADD:                        
+                        CodeGenerator.Add(string.Format("lbl{3}: mov tempBuffer[{0}*4], FUNC(IntAdd, {1}, {2})", t.positionInDynamicMemory, t.Operand1.Code, t.Operand2.Code,t.indexInList));
+                        break;
+                    case OperationType.SUB:
+                        CodeGenerator.Add(string.Format("lbl{3}: mov tempBuffer[{0}*4], FUNC(IntSub, {1}, {2})", t.positionInDynamicMemory, t.Operand1.Code, t.Operand2.Code, t.indexInList));
+                        break;
+                    case OperationType.MUL:
+                        CodeGenerator.Add(string.Format("lbl{3}: mov tempBuffer[{0}*4], FUNC(IntMul, {1}, {2})", t.positionInDynamicMemory, t.Operand1.Code, t.Operand2.Code, t.indexInList));
+                        break;
+                    case OperationType.DIV:
+                        CodeGenerator.Add(string.Format("lbl{3}: mov tempBuffer[{0}*4], FUNC(IntDiv, {1}, {2})", t.positionInDynamicMemory, t.Operand1.Code, t.Operand2.Code, t.indexInList));
+                        break;
+                    case OperationType.IF:
+                        CodeGenerator.Add(string.Format("lbl{0}: mov eax, {1}", t.indexInList, t.Operand1.Code));
+                        CodeGenerator.Add(string.Format("      mov ebx, {0}", t.Operand2.Code));
+                        CodeGenerator.Add(string.Format("      cmp eax, ebx"));
+                        //
+                        break;
+                    case OperationType.GREATER:
+                        CodeGenerator.Add(string.Format("      jle lbl{0}", t.Operand2.Tetrad.indexInList));
+                        break;
+                    case OperationType.LESS:
+                        CodeGenerator.Add(string.Format("      jge lbl{0}", t.Operand2.Tetrad.indexInList));
+                        break;
+                    case OperationType.EQUAL:
+                        CodeGenerator.Add(string.Format("      jne lbl{0}", t.Operand2.Tetrad.indexInList));
+                        break;
+                    case OperationType.NOTEQUAL:
+                        CodeGenerator.Add(string.Format("      je lbl{0}", t.Operand2.Tetrad.indexInList));
+                        break;
+                    
+                    case OperationType.MARK:
+                        CodeGenerator.Add(string.Format("lbl{0}: ", t.indexInList));
+                        break;
+                    case OperationType.ASSIGN:
+                        CodeGenerator.Add(string.Format("lbl{1}: mov eax, {0}", t.Operand2.Code, t.indexInList));
+                        CodeGenerator.Add(string.Format("\t   mov {0}, eax", t.Operand1.Code));
+                        break;
+                    case OperationType.FUNCTIONCALL:
+                        CodeGenerator.Add(string.Format("lbl{0}: {1}",t.indexInList,t.Operand1.FunctionCode));
+                        break;                           
                 }
-                if (needIncrease)
-                    currentTetrad = NextTetrad;
+                
             }
-        }
-        static void goTo(Tetrad Next)
-        {            
-            currentTetrad = Next;
-        }
-        static Tetrad NextTetrad
-        {
-            get
-            {
-                return list[list.IndexOf(currentTetrad) + 1];
-            }
-        }
+        }        
     }
     internal class Tetrad
     {
         public Operand Operand1, Operand2;
         public OperationType Operation;
+        public int positionInDynamicMemory = -1;
         bool isLink = false;        
         public bool IsLink
         {
@@ -110,15 +104,23 @@ namespace SwarthyStudio
             }
         }
         public Tetrad() { }
-        public Tetrad(OperationType operation, Operand operand1, Operand operand2)
+        public Tetrad(OperationType operation, Operand operand1, Operand operand2, int posInDynMem = -1)
         {
             Operation = operation;
             Operand1 = operand1;
             Operand2 = operand2;
+            positionInDynamicMemory = posInDynMem;
         }
         public override string ToString()
         {
-            return string.Format("[{3}]\t({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation),Operand1, Operand2, TetradManager.list.IndexOf(this));
+            return string.Format("[{3}.{4}]\t({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation),Operand1, Operand2, TetradManager.list.IndexOf(this),positionInDynamicMemory);
+        }
+        public int indexInList
+        {
+            get
+            {
+                return TetradManager.list.IndexOf(this);
+            }
         }
     }
     internal class Operand
@@ -126,7 +128,7 @@ namespace SwarthyStudio
         OperandType type = OperandType.Constant;
         Tetrad tetrad;
         Variable var;
-        string FunctionCode = "<NullCode>";
+        public string FunctionCode = "<NullCode>";
         int constant=0;
         public OperandType Type
         { get { return type; } }
@@ -146,6 +148,10 @@ namespace SwarthyStudio
             get
             {
                 return constant;
+            }
+            internal set
+            {
+                constant = value;
             }
         }
         public Operand()
@@ -189,6 +195,30 @@ namespace SwarthyStudio
                         break;
                     default:
                         return -1;
+                        break;
+                }
+            }
+        }
+        public string Code
+        {
+            get
+            {
+                switch (type)
+                {
+                    case OperandType.Constant:
+                        return constant.ToString();
+                        break;
+                    case OperandType.Variable:
+                        return string.Format("variables[{0}*4]",var.IndexInList);
+                        break;
+                    case OperandType.Tetrad:
+                        return string.Format("tempBuffer[{0}*4]",tetrad.positionInDynamicMemory);
+                        break;
+                    case OperandType.FunctionCode:
+                        return FunctionCode;
+                        break;
+                    default:
+                        return "NONE";
                         break;
                 }
             }
@@ -268,6 +298,6 @@ namespace SwarthyStudio
     }
     internal enum OperationType
     {
-        ADD, SUB, MUL, DIV, ASSIGN, IF, FUNCTIONCALL, GREATER, LESS, EQUAL, MARK, GOTO
+        ADD, SUB, MUL, DIV, ASSIGN, IF, FUNCTIONCALL, GREATER, LESS, EQUAL, NOTEQUAL, MARK, GOTO, ALLOCMEM, FREEMEM
     }    
 }

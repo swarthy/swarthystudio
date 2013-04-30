@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Diagnostics;
 
 namespace SwarthyStudio
 {
@@ -146,6 +147,26 @@ namespace SwarthyStudio
             {
                 LexicalAnalyzer.Process(tbCode.Text);                                
                 SyntaxAnalyzer.Process();
+                File.WriteAllText("asm\\test.asm", CodeGenerator.GetCode(), Encoding.GetEncoding(1251));
+
+                System.Diagnostics.ProcessStartInfo psi =
+   new System.Diagnostics.ProcessStartInfo(@"C:\Users\Александр\Documents\GitHub\swarthystudio\SwarthyStudio\bin\Debug\asm\BC.bat");
+                psi.RedirectStandardOutput = true;
+                psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+                psi.UseShellExecute = false;
+                System.Diagnostics.Process listFiles;
+                listFiles = System.Diagnostics.Process.Start(psi);
+                System.IO.StreamReader myOutput = listFiles.StandardOutput;
+                listFiles.WaitForExit(2000);
+                if (listFiles.HasExited)
+                {
+                    string output = myOutput.ReadToEnd();
+                    tbLog.Text += output;
+                    //this.processResults.Text = output;
+                }
+
+
+                //File.WriteAllText("asm\\test.asm", CodeGenerator.GetCode(), Encoding.UTF8);
             }
             catch (ErrorException ex)
             {
