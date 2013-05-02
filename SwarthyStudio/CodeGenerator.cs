@@ -11,13 +11,13 @@ namespace SwarthyStudio
     {
         static List<string> Code = new List<string>();
         static int labelCount = 0;
-        public static string GetCode()
+        public static string GetCode(string programName)
         {
             labelCount = 0;
             Code.Clear();
             Libs();
             DataQSection();
-            DataSection();
+            DataSection(new string[] {programName});
             //Code();
             MainCode();
             return Code.Aggregate((i, j) => i + "\r\n" + j);
@@ -30,7 +30,7 @@ namespace SwarthyStudio
             Comment("Подключение необходимых библиотек");
             Add("include include\\masm32rt.inc");
             Add("include include\\swarthy.inc");
-            Add("includelib lib\\swarthy.lib");
+            Add("includelib lib\\swarthy.lib");            
             CommentLine();
         }
         static void DataQSection()
@@ -40,11 +40,11 @@ namespace SwarthyStudio
             Add("tempBuffer\tSDWORD\t?");
             CommentLine();
         }
-        static void DataSection()
+        static void DataSection(params string[] parametres)
         {
             Add(".data");
             int i=0;
-            Add(string.Format("ConsoleTitle\tdb\t\"{0}\", 0", "тестCaption"));
+            Add(string.Format("ConsoleTitle\tdb\t\"{0}\", 0", parametres[0]));
             Add("nl\tdb\t 13, 10, 0");
             foreach (string cnst in LexicalAnalyzer.StringConstants)            
                 Add(string.Format("strConst{0}\tdb\t\"{1}\", 0", i++, cnst));            
@@ -64,7 +64,7 @@ namespace SwarthyStudio
             cl();
             Add("cls");
             Add("call main");
-            Add("inkey");
+            //Add("inkey"); //задержка экрана
             Add("exit");
             CommentLine();
 

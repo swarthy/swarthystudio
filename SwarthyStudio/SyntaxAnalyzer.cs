@@ -9,7 +9,9 @@ namespace SwarthyStudio
     {        
         private static List<Token> tokens;
         public static List<Variable> Variables = new List<Variable>();
-        public static Visibility currentVisibility = null;        
+        public static Visibility currentVisibility = null;
+        static List<Tetrad> breaks = new List<Tetrad>();
+        static int cyclesCount = 0;
         static public void Initialize()
         {
             
@@ -32,8 +34,10 @@ namespace SwarthyStudio
                 currentVisibility = exist;
             else
                 new Visibility();
+            bool haveActions = false;
             while(Peek.Type!=TokenType.CloseCurlyBracket && !endWhile)
             {
+                haveActions = true;
                 switch (Peek.Type)
                 {
                     case TokenType.Identifier:                        
@@ -53,15 +57,30 @@ namespace SwarthyStudio
                     case TokenType.For:
                         For();
                         break;
+                    case TokenType.Do:
+                        Do();
+                        break;
+                    case TokenType.Break:
+                        if (cyclesCount == 0)
+                            throw new ErrorException("Неожиданный break", Peek, ErrorType.SemanticError);
+                        Eat(TokenType.Break);
+                        Tetrad brk = new Tetrad(OperationType.GOTO, null, null);
+                        breaks.Add(brk);
+                        TetradManager.Add(brk);
+                        if (Peek.Type == TokenType.Delimitier)
+                            Eat(TokenType.Delimitier);
+                        break;
                     case TokenType.Number:
                         throw new ErrorException("Невозможно присвоить значение константе: " + Peek.Value, Peek, ErrorType.SyntaxError);                        
                         break;
                     default:
-                        throw new ErrorException("Неожиданный символStmt: " + Peek.Value, Peek, ErrorType.SyntaxError);
+                        throw new ErrorException("Неожиданный символ: " + Peek.Value, Peek, ErrorType.SyntaxError);
                 }
                 if (oneAction)
                     endWhile = true;
-            }            
+            }
+            if (!haveActions)
+                throw new ErrorException("Блок Statment должен содержать хотя бы 1 действие",Peek, ErrorType.SyntaxError);
             if (!oneAction)
                 Eat(TokenType.CloseCurlyBracket);// }   
             Visibility old = currentVisibility;
@@ -91,7 +110,7 @@ namespace SwarthyStudio
             TetradManager.Add(logic);
             
             Eat(TokenType.CloseBracket);
-
+            
             Statement();
 
             if (Peek.Type == TokenType.Else)
@@ -117,12 +136,40 @@ namespace SwarthyStudio
 
             TetradManager.Add(iftetrad);
             TetradManager.Add(logic);
-
+            
             Eat(TokenType.CloseBracket);
 
+            cyclesCount++;
             Statement();
+            cyclesCount--;            
+
             TetradManager.Add(new Tetrad(OperationType.GOTO, new Operand(iftetrad), null));
             logic.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
+            breaks.ForEach(t => t.Operand1 = logic.Operand2);
+            breaks.Clear();
+        }
+
+        static void Do()
+        {
+            Eat(TokenType.Do);
+            Operand beginCycle = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
+            cyclesCount++;
+            Statement();
+            cyclesCount--;
+
+            Eat(TokenType.While);
+
+            Eat(TokenType.OpenBracket);
+            Tetrad iftetrad = LogicalExpression();
+            Tetrad logic = new Tetrad(iftetrad.Operation, new Operand(iftetrad), null);
+            iftetrad.Operation = OperationType.IF;
+            Eat(TokenType.CloseBracket);
+            TetradManager.Add(iftetrad);
+            TetradManager.Add(logic);
+            TetradManager.Add(new Tetrad(OperationType.GOTO, beginCycle, null));
+            logic.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));
+            breaks.ForEach(t => t.Operand1 = logic.Operand2);
+            breaks.Clear();
         }
 
         static void For()
@@ -142,15 +189,23 @@ namespace SwarthyStudio
             Tetrad goTo = new Tetrad(OperationType.GOTO, new Operand(iftetrad), null);
             TetradManager.Add(iftetrad);
             TetradManager.Add(logic);
-
-            Statement(forVis);
+            int oldSize = TetradManager.list.Count;
+            Statement(forVis); // i++
+            int incSize = TetradManager.list.Count - oldSize;
+            var stCut = TetradManager.list.GetRange(oldSize, incSize);
+            TetradManager.list.RemoveRange(oldSize, incSize);
 
             Eat(TokenType.CloseBracket);
-            
-            Statement(forVis);
 
+            cyclesCount++;
+            Statement(forVis);
+            cyclesCount--;
+
+            TetradManager.list.AddRange(stCut);
             TetradManager.Add(goTo);//после тела цикла - проверяем условие
             logic.Operand2 = new Operand(TetradManager.Add(new Tetrad(OperationType.MARK, null, null)));//точка выхода
+            breaks.ForEach(t => t.Operand1 = logic.Operand2);
+            breaks.Clear();
         }
 
         static Tetrad LogicalExpression(Visibility exists = null)
@@ -159,12 +214,12 @@ namespace SwarthyStudio
                 currentVisibility = exists;
             Operand op1, op2;
             Token operand1 = Eat(TokenType.Identifier, TokenType.Number); // a       
-            op1 = operand1.Type == TokenType.Identifier ? new Operand(DeclarationCheck(operand1)) : new Operand(operand1.SubType == TokenSubType.HexNumber ? H.parseHex(operand1.Value) : H.parseRome(operand1.Value));
+            op1 = operand1.Type == TokenType.Identifier ? new Operand(DeclarationCheck(operand1)) : new Operand(operand1.GetNumValue);
 
             Token operation = Eat(TokenType.Compare);            // = 
 
             Token operand2 = Eat(TokenType.Identifier, TokenType.Number); // b
-            op2 = operand2.Type == TokenType.Identifier ? new Operand(DeclarationCheck(operand2)) : new Operand(operand2.SubType == TokenSubType.HexNumber ? H.parseHex(operand2.Value) : H.parseRome(operand2.Value));
+            op2 = operand2.Type == TokenType.Identifier ? new Operand(DeclarationCheck(operand2)) : new Operand(operand2.GetNumValue);
 
             Tetrad logic;
             switch (operation.SubType)
@@ -267,17 +322,29 @@ namespace SwarthyStudio
 
         static Operand Sum()
         {
-            Operand op1 = Mul();
-            while(Peek.SubType == TokenSubType.Add)
-            {                
-                OperationType operation = Peek.Value=="+"?OperationType.ADD:OperationType.SUB;
+            if (Peek.Value == "-")
+            {
                 Eat(TokenType.Operation);
-                Operand op2 = Mul();
-                Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone(), dynPos++);
+                Operand op = Sum();
+                Tetrad t = new Tetrad(OperationType.MUL, op.Clone(), new Operand(-1), dynPos++);
                 TetradManager.Add(t);
-                op1.Set(t);
+                op.Set(t);
+                return op;
             }
-            return op1;
+            else
+            {
+                Operand op1 = Mul();
+                while (Peek.SubType == TokenSubType.Add)
+                {
+                    OperationType operation = Peek.Value == "+" ? OperationType.ADD : OperationType.SUB;
+                    Eat(TokenType.Operation);
+                    Operand op2 = Mul();
+                    Tetrad t = new Tetrad(operation, op1.Clone(), op2.Clone(), dynPos++);
+                    TetradManager.Add(t);
+                    op1.Set(t);
+                }
+                return op1;
+            }
         }
 
         static Operand Mul()
@@ -306,17 +373,17 @@ namespace SwarthyStudio
                     op = new Operand(DeclarationCheck(d));
                     break;
                 case TokenType.Number:
-                    op = new Operand(d.SubType==TokenSubType.HexNumber?H.parseHex(d.Value):H.parseRome(d.Value));
+                    op = new Operand(d.GetNumValue);
                     break;
                 case TokenType.Function:
-                    op = FunctionCall(d, FunctionReturnType.Number);
+                    op = FunctionCall(d, FunctionReturnType.sInt);
                     break;
                 case TokenType.OpenBracket:
                     op = Sum();
                     Eat(TokenType.CloseBracket);
                     break;
                 default:
-                    throw new ErrorException("Неожиданный символ D: " + d.Value, d, ErrorType.SyntaxError);
+                    throw new ErrorException("Неожиданный символ: " + d.Value, d, ErrorType.SyntaxError);
                     break;
             }
             return op;

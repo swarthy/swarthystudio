@@ -30,76 +30,81 @@ namespace SwarthyStudio
                     if (c == '\r') pos--;
                     continue;
                 }
-                if (c == '\n')
-                {                    
-                    postEvent(Events.newLine, c, pos, line);
-                    line++;
-                    pos = -1;
-                    continue;
-                }
-                if (prev == '/' && c == '/')
-                {
-                    Lexems.RemoveAt(Lexems.Count - 1);
-                    while (text[i] != '\n')
-                        i++;
-                    i--;
-                    prev = '.';
-                    continue;
-                }
-                
-                    if (char.IsLetter(c) || char.IsDigit(c))
-                        postEvent(Events.Symbol, c, pos, line);                    
+                else
+                    if (c == '\n')
+                    {
+                        postEvent(Events.newLine, c, pos, line);
+                        line++;
+                        pos = -1;
+                        continue;
+                    }
                     else
-                        if (H.isOperation(c))
-                            postEvent(Events.Operation, c, pos, line);
+                        if (prev == '/' && c == '/')
+                        {
+                            Lexems.RemoveAt(Lexems.Count - 1);
+                            while (text[i] != '\n')
+                                i++;
+                            i--;
+                            prev = '.';
+                            continue;
+                        }
                         else
-                            switch (c)
-                            {
-                                case '(':
-                                    postEvent(Events.OpenBracket, c, pos, line);
-                                    break;
-                                case ')':
-                                    postEvent(Events.CloseBracket, c, pos, line);
-                                    break;
-                                case '{':
-                                    postEvent(Events.OpenCurlyBracket, c, pos, line);
-                                    break;
-                                case '}':
-                                    postEvent(Events.CloseCurlyBracket, c, pos, line);
-                                    break;
-                                case '=':
-                                    postEvent(Events.Assign, c, pos, line);
-                                    break;
-                                case ';':
-                                    postEvent(Events.Delimiter, c, pos, line);
-                                    break;                                
-                                case '>':
-                                    postEvent(Events.More, c, pos, line);
-                                    break;
-                                case '<':
-                                    postEvent(Events.Less, c, pos, line);
-                                    break;
-                                case '~':
-                                    postEvent(Events.Equal, c, pos, line);
-                                    break;
-                                case '#':
-                                    postEvent(Events.NotEqual, c, pos, line);
-                                    break;
-                                case '"':
-                                    postEvent(Events.Quote, c, pos, line);
-                                    break;
-                                case ',':
-                                    postEvent(Events.Comma, c, pos, line);
-                                    break;
-                                case ' ':
-                                    postEvent(Events.Space, c, pos, line);
-                                    break;
-                                default:
-                                    Err("Неизвестный символ", pos, line, ErrorType.LexicalError);
-                                    break;
-                            }
-                    prev = c;
-            }            
+                            if (char.IsLetter(c) || char.IsDigit(c))
+                                postEvent(Events.Symbol, c, pos, line);
+                            else
+                                if (H.isOperation(c))
+                                    postEvent(Events.Operation, c, pos, line);
+                                else
+                                    switch (c)
+                                    {
+                                        case '(':
+                                            postEvent(Events.OpenBracket, c, pos, line);
+                                            break;
+                                        case ')':
+                                            postEvent(Events.CloseBracket, c, pos, line);
+                                            break;
+                                        case '{':
+                                            postEvent(Events.OpenCurlyBracket, c, pos, line);
+                                            break;
+                                        case '}':
+                                            postEvent(Events.CloseCurlyBracket, c, pos, line);
+                                            break;
+                                        case '=':
+                                            postEvent(Events.Assign, c, pos, line);
+                                            break;
+                                        case ';':
+                                            postEvent(Events.Delimiter, c, pos, line);
+                                            break;
+                                        case '>':
+                                            postEvent(Events.More, c, pos, line);
+                                            break;
+                                        case '<':
+                                            postEvent(Events.Less, c, pos, line);
+                                            break;
+                                        case '~':
+                                            postEvent(Events.Equal, c, pos, line);
+                                            break;
+                                        case '#':
+                                            postEvent(Events.NotEqual, c, pos, line);
+                                            break;
+                                        case '"':
+                                            postEvent(Events.Quote, c, pos, line);
+                                            break;
+                                        case ',':
+                                            postEvent(Events.Comma, c, pos, line);
+                                            break;
+                                        case ' ':
+                                            postEvent(Events.Space, c, pos, line);
+                                            break;
+                                        default:
+                                            if (currentState != States.StringConst)
+                                                Err("Неизвестный символ", pos, line, ErrorType.LexicalError);
+                                            else
+                                                buffer += c;
+                                            break;
+                                    }
+                prev = c;
+            }
         }
         static void Refresh()
         {
@@ -181,7 +186,7 @@ namespace SwarthyStudio
                     Lexems.Add(new Token(value, type, subType,pos,line,1));
             if (type == TokenType.StringConstant)
                 if (value == "")
-                    throw new ErrorException("Строковая константа не может быть пустой",pos,line,ErrorType.SemanticError);
+                    throw new ErrorException("Строковая константа не может быть пустой", pos, line, ErrorType.SemanticError);
                 else
                     StringConstants.Add(buffer);
             if (type == TokenType.Identifier || type == TokenType.StringConstant)
@@ -294,31 +299,7 @@ namespace SwarthyStudio
         SyntaxError,
         SemanticError,
         InternalError        
-    }
-    class Error
-    {
-        public int Position { get; private set; }
-        public int Line { get; private set; }
-        public ErrorType Type { get; private set; }
-        public string Message { get; set; }
-        public Error() { }
-        public Error(string Message, ErrorType Type)
-        {
-            this.Message = Message;
-            this.Type = Type;
-        }
-        public Error(string Message, ErrorType Type, int Pos, int Line)
-        {
-            this.Message = Message;
-            Position = Pos;
-            this.Line = Line;
-            this.Type = Type;
-        }
-        public override string ToString()
-        {
-            return String.Format("{0}: {1}{2}", Enum.GetName(typeof(ErrorType), Type), Message, (Position == -1 ? "" : String.Format(" в строке {0} на {1} позиции", Line + 1, Position + 1)));
-        }
-    }
+    }    
     #endregion
     #region Токены
     class Token
@@ -354,7 +335,17 @@ namespace SwarthyStudio
             {
                 if (Type != TokenType.Number)
                     throw new ErrorException("Попытка получения числового значения токена, не являющегося числом",this,ErrorType.SemanticError);
-                return SubType == TokenSubType.HexNumber ? H.parseHex(Value) : H.parseRome(Value);
+                switch (SubType)
+                {
+                    case TokenSubType.HexNumber:
+                        return H.parseHex(Value);
+                    case TokenSubType.RomeNumber:
+                        return H.parseRome(Value);
+                    case TokenSubType.DecNumber:
+                        return int.Parse(Value.Substring(0,Value.Length-1));
+                    default:
+                        return 0;
+                }                
             }
         }
         public override string ToString()
@@ -364,7 +355,7 @@ namespace SwarthyStudio
     }
     enum TokenSubType
     {
-        Add, Mul, Write, Read, None, Less, More, Equal, NotEqual, RomeNumber, HexNumber
+        Add, Mul, Write, Read, None, Less, More, Equal, NotEqual, RomeNumber, HexNumber, DecNumber
     }
     enum TokenType
     {
@@ -384,6 +375,8 @@ namespace SwarthyStudio
         Else,
         While,
         For,
+        Do,
+        Break,
         Function,
         Compare,
         EOS        
@@ -395,7 +388,7 @@ namespace SwarthyStudio
         Symbol,
         Quote,
         Comma,
-        Space,
+        Space,        
         Delimiter, Operation, Assign, OpenBracket, CloseBracket, OpenCurlyBracket, CloseCurlyBracket, EOS, Less, More, Equal, NotEqual, newLine, Any
     }
     #endregion

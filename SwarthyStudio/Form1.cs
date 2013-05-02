@@ -13,16 +13,42 @@ namespace SwarthyStudio
 {
     public partial class Form1 : Form
     {
+        const string filter = "Swarthy Studio Code (*.ssc)|*.ssc|Текстовые документы|*.txt|Все документы|*.*";
         bool isCodeChanged = false;
         string filePath = "";
         bool catchedError = false;
+        bool showDebugForm = false, deleteASMandOBJ = true;
+        bool ShowDebugForm
+        {
+            get
+            {
+                return showDebugForm;
+            }
+            set
+            {
+                if (value)
+                    debugForm = new DEBUG();
+                else
+                    debugForm = null;
+                showDebugForm = value;
+            }
 
-        bool debug = true;
+        }
         DEBUG debugForm;
         public Form1()
         {
             InitializeComponent();
-            debugForm = new DEBUG();            
+            H.SetAssociationWithExtension(".ssc", "Swarthy Studio", Application.ExecutablePath, "Swarthy code");
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && File.Exists(args[1]))
+            {
+                filePath = args[1];
+                LoadCode(filePath);
+            }
+            dlgOpen.InitialDirectory = Application.StartupPath;
+            dlgOpen.Filter = filter;
+            dlgSave.InitialDirectory = Application.StartupPath;
+            dlgSave.Filter = filter;
         }
 
         private void новыйToolStripMenuItem_Click(object sender, EventArgs e)
@@ -44,7 +70,7 @@ namespace SwarthyStudio
 
         void Save()
         {            
-            if (!isCodeChanged)
+            if (!isCodeChanged && filePath!="")
                 return;
             if (filePath == "")
                 SaveAsCode();
@@ -90,7 +116,7 @@ namespace SwarthyStudio
         void Open()
         {
             if (isCodeChanged && MessageBox.Show("Сохранить изменения" + (filePath == "" ? "" : " в файле " + filePath) + "?", "Swarthy Studio", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes)
-                Save();
+                Save();            
             if (dlgOpen.ShowDialog() == System.Windows.Forms.DialogResult.OK && dlgOpen.FileName.Length > 0)
                 LoadCode(dlgOpen.FileName);            
         }
@@ -116,7 +142,7 @@ namespace SwarthyStudio
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (isCodeChanged && !debug)
+            if (isCodeChanged && !ShowDebugForm)
                 switch (MessageBox.Show("Сохранить изменения" + (filePath == "" ? "" : " в файле " + filePath) + " перед выходом?", "Swarthy Studio", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
                 {
                     case System.Windows.Forms.DialogResult.Yes:
@@ -134,9 +160,18 @@ namespace SwarthyStudio
         }
 
         private void компиляцияToolStripMenuItem_Click(object sender, EventArgs e)
-        {            
-            tbLog.Clear();
+        {
+            compilationBar.Visible = true;
+            compilationBar.Value = 0;
+            Compile(filePath, true, true);
+        }
+
+        bool Compile(string filePath, bool debug = false, bool needRun = false)
+        {
+            bool noerror = true;
             if (debug)
+                tbLog.Clear();
+            if (ShowDebugForm)
             {
                 debugForm.lexems.Clear();
                 debugForm.tetrads.Clear();
@@ -145,32 +180,50 @@ namespace SwarthyStudio
             }
             try
             {
-                LexicalAnalyzer.Process(tbCode.Text);                                
-                SyntaxAnalyzer.Process();
-                File.WriteAllText("asm\\test.asm", CodeGenerator.GetCode(), Encoding.GetEncoding(1251));
-
-                System.Diagnostics.ProcessStartInfo psi =
-   new System.Diagnostics.ProcessStartInfo(@"C:\Users\Александр\Documents\GitHub\swarthystudio\SwarthyStudio\bin\Debug\asm\BC.bat");
-                psi.RedirectStandardOutput = true;
-                psi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-                psi.UseShellExecute = false;
-                System.Diagnostics.Process listFiles;
-                listFiles = System.Diagnostics.Process.Start(psi);
-                System.IO.StreamReader myOutput = listFiles.StandardOutput;
-                listFiles.WaitForExit(2000);
-                if (listFiles.HasExited)
+                LexicalAnalyzer.Process(tbCode.Text);                
+                SyntaxAnalyzer.Process();                
+                string name = "NewProgram";
+                if (filePath != "")
+                    name = Path.GetFileNameWithoutExtension(filePath);
+                File.WriteAllText("code.asm", CodeGenerator.GetCode(name), Encoding.GetEncoding(1251));                
+                string AssmErr = ExecuteCommand(@"ml.exe /c /coff /nologo code.asm");
+                string LinkErr = ExecuteCommand(@"link.exe /SUBSYSTEM:CONSOLE /OPT:NOREF /nologo code.obj");                
+                if (debug)
                 {
-                    string output = myOutput.ReadToEnd();
-                    tbLog.Text += output;
-                    //this.processResults.Text = output;
+                    if (AssmErr != "")
+                    {
+                        tbLog.Text += string.Format("Assembly error: {0}\r\n", AssmErr);
+                        noerror = false;
+                    }
+                    if (LinkErr != "")
+                    {
+                        tbLog.Text += string.Format("Link error: {0}\r\n", LinkErr);
+                        noerror = false;
+                    }
                 }
-
-
-                //File.WriteAllText("asm\\test.asm", CodeGenerator.GetCode(), Encoding.UTF8);
+                if (deleteASMandOBJ)
+                {
+                    File.Delete("code.obj");
+                    File.Delete("code.asm");
+                }                
+                if (filePath != "")
+                {
+                    string newProgPath = Path.GetDirectoryName(filePath) + "\\" + name + ".exe";
+                    File.Copy("code.exe", newProgPath, true);
+                    if (needRun)
+                        RunProgram(newProgPath);
+                }
+                else
+                {
+                    if (needRun)
+                        RunProgram(Application.StartupPath + "\\code.exe");
+                }
+                if(debug)
+                    compilationBar.Visible = false;                
             }
             catch (ErrorException ex)
             {
-                tbLog.Text += ex.ToString()+"\r\n";
+                tbLog.Text += ex.ToString() + "\r\n";
                 if (ex.Position != -1)
                 {
                     int oldPos = tbCode.SelectionStart;
@@ -181,13 +234,17 @@ namespace SwarthyStudio
                     tbCode.SelectionLength = 0;
                 }
                 catchedError = true;
+                noerror = false;
             }
+            if (ShowDebugForm)
+            {
+                foreach (Token t in LexicalAnalyzer.Lexems)
+                    debugForm.lexems.Text += t.ToString() + "\r\n";
 
-            foreach (Token t in LexicalAnalyzer.Lexems)
-                debugForm.lexems.Text += t.ToString() + "\r\n";
-            
-            foreach (Tetrad tetrad in TetradManager.list)
-                debugForm.tetrads.Text += tetrad.ToString() + "\r\n";
+                foreach (Tetrad tetrad in TetradManager.list)
+                    debugForm.tetrads.Text += tetrad.ToString() + "\r\n";
+            }
+            return noerror;
         }
 
         void clearCode()
@@ -206,16 +263,7 @@ namespace SwarthyStudio
             LexicalAnalyzer.Initialize();
             SyntaxAnalyzer.Initialize();
         }
-
-        class test
-        {
-            public int val;
-            public test(int a)
-            {
-                val = a;
-            }
-        }
-
+        
         private void tbCode_KeyDown(object sender, KeyEventArgs e)
         {            
             if (e.KeyValue == 13)
@@ -235,9 +283,67 @@ namespace SwarthyStudio
             }            
         }
 
-        private void debugToolStripMenuItem_Click(object sender, EventArgs e)
+        static string ExecuteCommand(string command)
         {
-            debugForm.Show();
+            int exitCode;
+            ProcessStartInfo processInfo;
+            Process process;
+
+            processInfo = new ProcessStartInfo("cmd.exe", "/c " + command);
+            processInfo.CreateNoWindow = true;
+            processInfo.UseShellExecute = false;
+            // *** Redirect the output ***
+            processInfo.RedirectStandardError = true;
+            processInfo.RedirectStandardOutput = true;
+
+            process = Process.Start(processInfo);
+            process.WaitForExit();
+
+            // *** Read the streams ***
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+
+            exitCode = process.ExitCode;
+            process.Close();
+            return exitCode == 0 ? "" : output;
         }
+        static void RunProgram(string path)
+        {
+            int exitCode;
+            ProcessStartInfo processInfo;
+            Process process;
+
+            processInfo = new ProcessStartInfo("cmd.exe", "/c " + path);
+            processInfo.CreateNoWindow = false;
+            processInfo.UseShellExecute = true;
+            
+            process = Process.Start(processInfo);
+            process.WaitForExit();
+
+            exitCode = process.ExitCode;
+            process.Close();
+        }
+
+        private void выводитьОкноDebugToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            ShowDebugForm = выводитьОкноDebugToolStripMenuItem.Checked;
+        }
+        
+        private void deleteObjAsm_CheckedChanged(object sender, EventArgs e)
+        {
+            deleteASMandOBJ = deleteObjAsm.Checked;
+        }
+
+        private void помощьToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Help.ShowHelp(this, "help\\help.chm");
+        }
+
+        private void оПрограммеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AboutBox1 box = new AboutBox1();
+            box.ShowDialog();
+        }
+
     }
 }
