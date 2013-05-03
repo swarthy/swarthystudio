@@ -47,6 +47,7 @@
             this.debugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.выводитьОкноDebugToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteObjAsm = new System.Windows.Forms.ToolStripMenuItem();
+            this.запускExeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
             this.помощьToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripSeparator();
@@ -105,7 +106,7 @@
             // toolStripStatusLabel3
             // 
             this.toolStripStatusLabel3.Name = "toolStripStatusLabel3";
-            this.toolStripStatusLabel3.Size = new System.Drawing.Size(296, 17);
+            this.toolStripStatusLabel3.Size = new System.Drawing.Size(479, 17);
             this.toolStripStatusLabel3.Spring = true;
             // 
             // cursorPosition
@@ -204,7 +205,8 @@
             // 
             this.debugToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.выводитьОкноDebugToolStripMenuItem,
-            this.deleteObjAsm});
+            this.deleteObjAsm,
+            this.запускExeToolStripMenuItem});
             this.debugToolStripMenuItem.Name = "debugToolStripMenuItem";
             this.debugToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F4;
             this.debugToolStripMenuItem.Size = new System.Drawing.Size(56, 20);
@@ -216,7 +218,7 @@
             this.выводитьОкноDebugToolStripMenuItem.CheckOnClick = true;
             this.выводитьОкноDebugToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.выводитьОкноDebugToolStripMenuItem.Name = "выводитьОкноDebugToolStripMenuItem";
-            this.выводитьОкноDebugToolStripMenuItem.Size = new System.Drawing.Size(219, 22);
+            this.выводитьОкноDebugToolStripMenuItem.Size = new System.Drawing.Size(353, 22);
             this.выводитьОкноDebugToolStripMenuItem.Text = "Выводить окно debug";
             this.выводитьОкноDebugToolStripMenuItem.CheckedChanged += new System.EventHandler(this.выводитьОкноDebugToolStripMenuItem_CheckedChanged);
             // 
@@ -226,9 +228,17 @@
             this.deleteObjAsm.CheckOnClick = true;
             this.deleteObjAsm.CheckState = System.Windows.Forms.CheckState.Checked;
             this.deleteObjAsm.Name = "deleteObjAsm";
-            this.deleteObjAsm.Size = new System.Drawing.Size(219, 22);
+            this.deleteObjAsm.Size = new System.Drawing.Size(353, 22);
             this.deleteObjAsm.Text = "Удалять файлы .asm и .obj";
             this.deleteObjAsm.CheckedChanged += new System.EventHandler(this.deleteObjAsm_CheckedChanged);
+            // 
+            // запускExeToolStripMenuItem
+            // 
+            this.запускExeToolStripMenuItem.CheckOnClick = true;
+            this.запускExeToolStripMenuItem.Name = "запускExeToolStripMenuItem";
+            this.запускExeToolStripMenuItem.Size = new System.Drawing.Size(353, 22);
+            this.запускExeToolStripMenuItem.Text = "Запускать .exe файл после успешной компиляции";
+            this.запускExeToolStripMenuItem.CheckedChanged += new System.EventHandler(this.запускExeToolStripMenuItem_CheckedChanged);
             // 
             // toolStripMenuItem2
             // 
@@ -244,19 +254,19 @@
             // 
             this.помощьToolStripMenuItem.Name = "помощьToolStripMenuItem";
             this.помощьToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F1;
-            this.помощьToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.помощьToolStripMenuItem.Size = new System.Drawing.Size(149, 22);
             this.помощьToolStripMenuItem.Text = "Помощь";
             this.помощьToolStripMenuItem.Click += new System.EventHandler(this.помощьToolStripMenuItem_Click);
             // 
             // toolStripMenuItem3
             // 
             this.toolStripMenuItem3.Name = "toolStripMenuItem3";
-            this.toolStripMenuItem3.Size = new System.Drawing.Size(149, 6);
+            this.toolStripMenuItem3.Size = new System.Drawing.Size(146, 6);
             // 
             // оПрограммеToolStripMenuItem
             // 
             this.оПрограммеToolStripMenuItem.Name = "оПрограммеToolStripMenuItem";
-            this.оПрограммеToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.оПрограммеToolStripMenuItem.Size = new System.Drawing.Size(149, 22);
             this.оПрограммеToolStripMenuItem.Text = "О программе";
             this.оПрограммеToolStripMenuItem.Click += new System.EventHandler(this.оПрограммеToolStripMenuItem_Click);
             // 
@@ -282,7 +292,7 @@
             this.tbCode.Name = "tbCode";
             this.tbCode.Size = new System.Drawing.Size(533, 161);
             this.tbCode.TabIndex = 3;
-            this.tbCode.Text = "{\n\n}";
+            this.tbCode.Text = "{\nb=5;\na=1+2+b+3+4+5;\n}\n";
             this.tbCode.SelectionChanged += new System.EventHandler(this.tbCode_SelectionChanged);
             this.tbCode.TextChanged += new System.EventHandler(this.tbCode_TextChanged);
             this.tbCode.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tbCode_KeyDown);
@@ -363,6 +373,7 @@
         private System.Windows.Forms.ToolStripMenuItem помощьToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem3;
         private System.Windows.Forms.ToolStripMenuItem оПрограммеToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem запускExeToolStripMenuItem;
     }
 }
 

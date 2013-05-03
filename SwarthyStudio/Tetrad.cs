@@ -19,6 +19,13 @@ namespace SwarthyStudio
             list.Add(t);
             return t;
         }
+        static internal Tetrad Next(Tetrad t)
+        {
+            int pos = list.IndexOf(t);
+            if (pos + 1 >= list.Count)
+                return null;
+            return list[pos + 1];
+        }
         
         static public void BeginSolve()
         {            
@@ -26,9 +33,8 @@ namespace SwarthyStudio
             {                
                 switch (t.Operation)
                 {
-                    case OperationType.ALLOCMEM:
-                        if (t.Operand1.Constant>0)
-                            CodeGenerator.Add(string.Format("lbl{1}: mov tempBuffer, alloc({0}*4)",t.Operand1.Constant,t.indexInList));
+                    case OperationType.ALLOCMEM:                        
+                        CodeGenerator.Add(string.Format("lbl{1}: mov tempBuffer, alloc({0}*4)",t.Operand1.Constant,t.indexInList));
                         break;
                     case OperationType.FREEMEM:
                         CodeGenerator.Add(string.Format("lbl{0}: free([tempBuffer])",t.indexInList));
@@ -71,8 +77,13 @@ namespace SwarthyStudio
                         CodeGenerator.Add(string.Format("lbl{0}: ", t.indexInList));
                         break;
                     case OperationType.ASSIGN:
-                        CodeGenerator.Add(string.Format("lbl{1}: mov eax, {0}", t.Operand2.Code, t.indexInList));
-                        CodeGenerator.Add(string.Format("\t   mov {0}, eax", t.Operand1.Code));
+                        if (t.Operand2.Type == OperandType.Constant)
+                            CodeGenerator.Add(string.Format("\tmov {0}, {1}", t.Operand1.Code, t.Operand2.Code));
+                        else
+                        {
+                            CodeGenerator.Add(string.Format("lbl{1}: mov eax, {0}", t.Operand2.Code, t.indexInList));
+                            CodeGenerator.Add(string.Format("\tmov {0}, eax", t.Operand1.Code));
+                        }
                         break;
                     case OperationType.FUNCTIONCALL:
                         CodeGenerator.Add(string.Format("lbl{0}: {1}",t.indexInList,t.Operand1.FunctionCode));
@@ -86,34 +97,30 @@ namespace SwarthyStudio
     {
         public Operand Operand1, Operand2;
         public OperationType Operation;
-        public int positionInDynamicMemory = -1;
-        bool isLink = false;        
-        public bool IsLink
-        {
-            get
-            {
-                return isLink;
-            }
-        }        
-        internal int Result = 0;
-        public int Value
-        {
-            get
-            {                
-                return Result;
-            }
-        }
+        public int positionInDynamicMemory = -1;             
         public Tetrad() { }
         public Tetrad(OperationType operation, Operand operand1, Operand operand2, int posInDynMem = -1)
         {
             Operation = operation;
             Operand1 = operand1;
             Operand2 = operand2;
+            if (Operand1 != null && Operand1.Type == OperandType.Tetrad && Operand1.Tetrad.Operation == OperationType.CONSTANT)
+            {
+                int val = Operand1.Tetrad.Operand1.Constant;
+                TetradManager.list.Remove(Operand1.Tetrad);
+                Operand1.Set(val);
+            }
+            if (Operand2 != null && Operand2.Type == OperandType.Tetrad && Operand2.Tetrad.Operation == OperationType.CONSTANT)
+            {
+                int val = Operand2.Tetrad.Operand1.Constant;
+                TetradManager.list.Remove(Operand2.Tetrad);
+                Operand2.Set(val);
+            }
             positionInDynamicMemory = posInDynMem;
         }
         public override string ToString()
         {
-            return string.Format("[{3}.{4}]\t({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation),Operand1, Operand2, TetradManager.list.IndexOf(this),positionInDynamicMemory);
+            return string.Format("[{3}.{4}]\t({0}, {1}, {2})", Enum.GetName(typeof(OperationType), Operation), Operand1, Operand2, TetradManager.list.IndexOf(this), positionInDynamicMemory);
         }
         public int indexInList
         {
@@ -121,6 +128,12 @@ namespace SwarthyStudio
             {
                 return TetradManager.list.IndexOf(this);
             }
+        }
+        public void Set(OperationType operation, Operand operand1, Operand operand2)
+        {
+            Operation = operation;
+            Operand1 = operand1;
+            Operand2 = operand2;
         }
     }
     internal class Operand
@@ -191,7 +204,8 @@ namespace SwarthyStudio
                         return SyntaxAnalyzer.Variables.IndexOf(var);//возвращает номер переменной в списке переменных
                         break;
                     case OperandType.Tetrad:
-                        return tetrad.Value;
+                        //return tetrad.Value;
+                        throw new Exception("Get tetrad value!");
                         break;
                     default:
                         return -1;
@@ -298,6 +312,6 @@ namespace SwarthyStudio
     }
     internal enum OperationType
     {
-        ADD, SUB, MUL, DIV, ASSIGN, IF, FUNCTIONCALL, GREATER, LESS, EQUAL, NOTEQUAL, MARK, GOTO, ALLOCMEM, FREEMEM
+        ADD, SUB, MUL, DIV, ASSIGN, IF, FUNCTIONCALL, GREATER, LESS, EQUAL, NOTEQUAL, MARK, GOTO, ALLOCMEM, FREEMEM, CONSTANT
     }    
 }

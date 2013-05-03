@@ -11,13 +11,13 @@ namespace SwarthyStudio
 {
     public partial class DEBUG : Form
     {
-        public TextBox lexems;
-        public TextBox tetrads;        
+        public TextBox lexems, tetrads, assmCode;        
         public DEBUG()
         {
             InitializeComponent();
             lexems = tbLexems;
-            tetrads = tbTetradList;            
+            tetrads = tbTetradList;
+            assmCode = tbAssemblerCode;
         }
 
         private void DEBUG_FormClosing(object sender, FormClosingEventArgs e)

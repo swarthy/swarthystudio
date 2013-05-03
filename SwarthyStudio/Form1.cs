@@ -17,7 +17,7 @@ namespace SwarthyStudio
         bool isCodeChanged = false;
         string filePath = "";
         bool catchedError = false;
-        bool showDebugForm = false, deleteASMandOBJ = true;
+        bool showDebugForm = true, deleteASMandOBJ = true, RunAfterCompile = false;
         bool ShowDebugForm
         {
             get
@@ -38,17 +38,38 @@ namespace SwarthyStudio
         public Form1()
         {
             InitializeComponent();
-            H.SetAssociationWithExtension(".ssc", "Swarthy Studio", Application.ExecutablePath, "Swarthy code");
+            debugForm = new DEBUG();
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && File.Exists(args[1]))
             {
                 filePath = args[1];
                 LoadCode(filePath);
             }
+            
             dlgOpen.InitialDirectory = Application.StartupPath;
             dlgOpen.Filter = filter;
             dlgSave.InitialDirectory = Application.StartupPath;
             dlgSave.Filter = filter;
+            tbCode.AllowDrop = true;
+            tbCode.DragEnter += new DragEventHandler(Code_DragEnter);
+            tbCode.DragDrop += new DragEventHandler(Code_DragDrop);
+
+            выводитьОкноDebugToolStripMenuItem.Checked = showDebugForm;
+            запускExeToolStripMenuItem.Checked = RunAfterCompile;
+            deleteObjAsm.Checked = deleteASMandOBJ;
+
+        }
+
+
+        void Code_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+        }
+        void Code_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);            
+            filePath = files[0];
+            LoadCode(filePath);                            
         }
 
         private void новыйToolStripMenuItem_Click(object sender, EventArgs e)
@@ -163,18 +184,17 @@ namespace SwarthyStudio
         {
             compilationBar.Visible = true;
             compilationBar.Value = 0;
-            Compile(filePath, true, true);
+            Compile(filePath, RunAfterCompile);
         }
 
-        bool Compile(string filePath, bool debug = false, bool needRun = false)
-        {
-            bool noerror = true;
-            if (debug)
-                tbLog.Clear();
+        void Compile(string filePath, bool needRun = false)
+        {            
+            tbLog.Clear();
             if (ShowDebugForm)
             {
                 debugForm.lexems.Clear();
                 debugForm.tetrads.Clear();
+                debugForm.assmCode.Clear();
                 debugForm.Show();
                 this.BringToFront();
             }
@@ -183,43 +203,52 @@ namespace SwarthyStudio
                 LexicalAnalyzer.Process(tbCode.Text);                
                 SyntaxAnalyzer.Process();                
                 string name = "NewProgram";
+                string exePath = Path.GetDirectoryName(Application.ExecutablePath);                
                 if (filePath != "")
                     name = Path.GetFileNameWithoutExtension(filePath);
-                File.WriteAllText("code.asm", CodeGenerator.GetCode(name), Encoding.GetEncoding(1251));                
-                string AssmErr = ExecuteCommand(@"ml.exe /c /coff /nologo code.asm");
-                string LinkErr = ExecuteCommand(@"link.exe /SUBSYSTEM:CONSOLE /OPT:NOREF /nologo code.obj");                
-                if (debug)
-                {
-                    if (AssmErr != "")
-                    {
-                        tbLog.Text += string.Format("Assembly error: {0}\r\n", AssmErr);
-                        noerror = false;
-                    }
-                    if (LinkErr != "")
-                    {
-                        tbLog.Text += string.Format("Link error: {0}\r\n", LinkErr);
-                        noerror = false;
-                    }
-                }
+
+                tbLog.Text += "Генерация ассемблерного кода... ";
+                string code = CodeGenerator.GetCode(name);
+                if (showDebugForm)
+                    debugForm.assmCode.Text = CodeGenerator.GetCode(name);
+                File.WriteAllText(exePath + "\\code.asm", code, Encoding.GetEncoding(1251));
+                tbLog.Text += "Ok!\r\n";
+
+                tbLog.Text += "Генерация .obj файла... ";
+                string AssmErr = ExecuteCommand(string.Format(@"cd {0} && ml.exe /c /coff /nologo code.asm",exePath));                
+                if (AssmErr != "")                
+                    throw new ErrorException(string.Format("\r\nAssembly error: {0}\r\n", AssmErr), ErrorType.InternalError);                                                        
+                else
+                    tbLog.Text += "Ok!\r\n";
+
+                tbLog.Text += "Генерация .exe файла... ";
+                string LinkErr = ExecuteCommand(string.Format(@"cd {0} && link.exe /SUBSYSTEM:CONSOLE /OPT:NOREF /nologo code.obj", exePath));
+                if (LinkErr != "")
+                    throw new ErrorException(string.Format("\r\nLink error: {0}\r\n", LinkErr), ErrorType.InternalError);
+                else
+                    tbLog.Text += "Ok!\r\n";
+
+                if (!File.Exists(exePath + "\\code.exe"))
+                    throw new ErrorException("Исполняемый файл не создан. Ошибка компиляции.", ErrorType.InternalError);
                 if (deleteASMandOBJ)
                 {
-                    File.Delete("code.obj");
-                    File.Delete("code.asm");
+                    File.Delete(exePath+"\\code.obj");
+                    File.Delete(exePath+"\\code.asm");
                 }                
                 if (filePath != "")
                 {
-                    string newProgPath = Path.GetDirectoryName(filePath) + "\\" + name + ".exe";
-                    File.Copy("code.exe", newProgPath, true);
+                    string newProgPath = Path.GetDirectoryName(filePath) + "\\" + name + ".exe";                    
+                    File.Copy(exePath + "\\code.exe", newProgPath, true);
+                    File.Delete(exePath + "\\code.exe");
                     if (needRun)
-                        RunProgram(newProgPath);
+                        RunProgram(newProgPath, exePath);
                 }
                 else
                 {
                     if (needRun)
-                        RunProgram(Application.StartupPath + "\\code.exe");
+                        RunProgram(exePath + "\\code.exe", exePath);
                 }
-                if(debug)
-                    compilationBar.Visible = false;                
+                compilationBar.Visible = false;                
             }
             catch (ErrorException ex)
             {
@@ -233,8 +262,7 @@ namespace SwarthyStudio
                     tbCode.SelectionStart = oldPos;
                     tbCode.SelectionLength = 0;
                 }
-                catchedError = true;
-                noerror = false;
+                catchedError = true;                
             }
             if (ShowDebugForm)
             {
@@ -243,8 +271,7 @@ namespace SwarthyStudio
 
                 foreach (Tetrad tetrad in TetradManager.list)
                     debugForm.tetrads.Text += tetrad.ToString() + "\r\n";
-            }
-            return noerror;
+            }            
         }
 
         void clearCode()
@@ -283,9 +310,10 @@ namespace SwarthyStudio
             }            
         }
 
-        static string ExecuteCommand(string command)
-        {
+        string ExecuteCommand(string command)
+        {            
             int exitCode;
+            
             ProcessStartInfo processInfo;
             Process process;
 
@@ -307,21 +335,22 @@ namespace SwarthyStudio
             process.Close();
             return exitCode == 0 ? "" : output;
         }
-        static void RunProgram(string path)
+        void RunProgram(string path, string myPath)
         {
             int exitCode;
             ProcessStartInfo processInfo;
             Process process;
-
-            processInfo = new ProcessStartInfo("cmd.exe", "/c " + path);
-            processInfo.CreateNoWindow = false;
-            processInfo.UseShellExecute = true;
+                        
+            tbLog.Text += "Запуск программы.\r\n";            
+            processInfo = new ProcessStartInfo(path);
+            //processInfo.WorkingDirectory = myPath;
             
             process = Process.Start(processInfo);
             process.WaitForExit();
 
             exitCode = process.ExitCode;
             process.Close();
+            tbLog.Text += "Программа завершилась.\r\n";
         }
 
         private void выводитьОкноDebugToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
@@ -343,6 +372,11 @@ namespace SwarthyStudio
         {
             AboutBox1 box = new AboutBox1();
             box.ShowDialog();
+        }
+
+        private void запускExeToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            RunAfterCompile = запускExeToolStripMenuItem.Checked;
         }
 
     }

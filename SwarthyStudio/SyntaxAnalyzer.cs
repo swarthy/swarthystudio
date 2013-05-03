@@ -9,6 +9,7 @@ namespace SwarthyStudio
     {        
         private static List<Token> tokens;
         public static List<Variable> Variables = new List<Variable>();
+        static Dictionary<Variable, int> ConvolutionTable = new Dictionary<Variable, int>();
         public static Visibility currentVisibility = null;
         static List<Tetrad> breaks = new List<Tetrad>();
         static int cyclesCount = 0;
@@ -20,7 +21,8 @@ namespace SwarthyStudio
         public static void Process()
         {
             tokens = LexicalAnalyzer.Lexems.ToList();//DEBUG: копируем список, в release версии - передать по ссылке
-            currentVisibility = null;            
+            currentVisibility = null;
+            ConvolutionTable.Clear();
             Variables.Clear();
             TetradManager.list.Clear();
             Statement();
@@ -308,17 +310,80 @@ namespace SwarthyStudio
             Operand op1 = new Operand(currentVisibility.FindOrCreate(Eat(TokenType.Identifier).Value));
             Eat(TokenType.Assign);
             Operand memSize = new Operand(0);
-            TetradManager.Add(new Tetrad(OperationType.ALLOCMEM, memSize, null));
+            Tetrad allocMemory = new Tetrad(OperationType.ALLOCMEM, memSize, null);
+            TetradManager.Add(allocMemory);
             int prevTetradCount = TetradManager.list.Count;
             dynPos = 0;
-            Operand op2 = Sum();            
+            Operand op2 = Sum();
+            if (op2.Type==OperandType.Tetrad)
+                Convolution(prevTetradCount);
             if (Peek.Type==TokenType.Delimitier)
-                Eat(TokenType.Delimitier);
-            memSize.Constant = TetradManager.list.Count - prevTetradCount;
+                Eat(TokenType.Delimitier);            
             TetradManager.Add(new Tetrad(OperationType.ASSIGN, op1.Clone(), op2.Clone()));
-            if (memSize.Constant>0)
+            if (TetradManager.list.Last().Operand2.Type == OperandType.Constant)
+                ConvolutionTable[TetradManager.list.Last().Operand1.Variable] = TetradManager.list.Last().Operand2.Constant;
+            else
+                if (ConvolutionTable.ContainsKey(TetradManager.list.Last().Operand1.Variable))
+                    ConvolutionTable.Remove(TetradManager.list.Last().Operand1.Variable);
+            memSize.Constant = TetradManager.list.Count - prevTetradCount - 1;
+            if (memSize.Constant > 0)
                 TetradManager.Add(new Tetrad(OperationType.FREEMEM, null, null));
-        }        
+            else
+                TetradManager.list.Remove(allocMemory);
+        }
+
+        static void Convolution(int beginOfLinearArea)
+        {
+            Tetrad t = TetradManager.list[beginOfLinearArea];
+            while (t != null)
+            {
+                if (t.Operand1 != null && t.Operand2 != null &&
+                    (t.Operand1.Type == OperandType.Constant || (t.Operand1.Type == OperandType.Variable && ConvolutionTable.ContainsKey(t.Operand1.Variable))) &&
+                    (t.Operand2.Type == OperandType.Constant || (t.Operand2.Type == OperandType.Variable && ConvolutionTable.ContainsKey(t.Operand2.Variable))))
+                {
+                    int val1 = t.Operand1.Type == OperandType.Constant ? t.Operand1.Constant : ConvolutionTable[t.Operand1.Variable];
+                    int val2 = t.Operand2.Type == OperandType.Constant ? t.Operand2.Constant : ConvolutionTable[t.Operand2.Variable];
+                    switch (t.Operation)
+                    {
+                        case OperationType.ADD:
+                            t.Operation = OperationType.CONSTANT;
+                            t.Operand1.Set(val1 + val2);
+                            t.Operand2 = null;
+                            break;
+                        case OperationType.SUB:
+                            t.Operation = OperationType.CONSTANT;
+                            t.Operand1.Set(val1 - val2);
+                            t.Operand2 = null;
+                            break;
+                        case OperationType.MUL:
+                            t.Operation = OperationType.CONSTANT;
+                            t.Operand1.Set(val1 * val2);
+                            t.Operand2 = null;
+                            break;
+                        case OperationType.DIV:
+                            t.Operation = OperationType.CONSTANT;
+                            t.Operand1.Set(val1 / val2);
+                            t.Operand2 = null;
+                            break;
+                    }
+                }
+                if (t.Operand1!=null && t.Operand1.Type == OperandType.Tetrad && t.Operand1.Tetrad.Operation == OperationType.CONSTANT)
+                {
+                    int val = t.Operand1.Tetrad.Operand1.Constant;
+                    TetradManager.list.Remove(t.Operand1.Tetrad);
+                    t.Operand1.Set(val);
+                    continue;
+                }
+                if (t.Operand2 != null && t.Operand2.Type == OperandType.Tetrad && t.Operand2.Tetrad.Operation == OperationType.CONSTANT)
+                {
+                    int val = t.Operand2.Tetrad.Operand1.Constant;
+                    TetradManager.list.Remove(t.Operand2.Tetrad);
+                    t.Operand2.Set(val);
+                    continue;
+                }
+                t = TetradManager.Next(t);
+            }
+        }
 
         static Operand Sum()
         {

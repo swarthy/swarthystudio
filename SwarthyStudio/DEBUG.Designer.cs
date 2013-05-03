@@ -33,9 +33,12 @@
             this.tbLexems = new System.Windows.Forms.TextBox();
             this.tpTetrads = new System.Windows.Forms.TabPage();
             this.tbTetradList = new System.Windows.Forms.TextBox();
+            this.tpAssembler = new System.Windows.Forms.TabPage();
+            this.tbAssemblerCode = new System.Windows.Forms.TextBox();
             this.tabControl1.SuspendLayout();
             this.tpLexems.SuspendLayout();
             this.tpTetrads.SuspendLayout();
+            this.tpAssembler.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabControl1
@@ -45,6 +48,7 @@
                         | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl1.Controls.Add(this.tpLexems);
             this.tabControl1.Controls.Add(this.tpTetrads);
+            this.tabControl1.Controls.Add(this.tpAssembler);
             this.tabControl1.Location = new System.Drawing.Point(12, 12);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
@@ -96,6 +100,29 @@
             this.tbTetradList.Size = new System.Drawing.Size(577, 240);
             this.tbTetradList.TabIndex = 0;
             // 
+            // tpAssembler
+            // 
+            this.tpAssembler.Controls.Add(this.tbAssemblerCode);
+            this.tpAssembler.Location = new System.Drawing.Point(4, 22);
+            this.tpAssembler.Name = "tpAssembler";
+            this.tpAssembler.Size = new System.Drawing.Size(583, 246);
+            this.tpAssembler.TabIndex = 3;
+            this.tpAssembler.Text = "Ассемблерный код";
+            this.tpAssembler.UseVisualStyleBackColor = true;
+            // 
+            // tbAssemblerCode
+            // 
+            this.tbAssemblerCode.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                        | System.Windows.Forms.AnchorStyles.Left)
+                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.tbAssemblerCode.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.tbAssemblerCode.Location = new System.Drawing.Point(3, 3);
+            this.tbAssemblerCode.Multiline = true;
+            this.tbAssemblerCode.Name = "tbAssemblerCode";
+            this.tbAssemblerCode.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.tbAssemblerCode.Size = new System.Drawing.Size(577, 240);
+            this.tbAssemblerCode.TabIndex = 1;
+            // 
             // DEBUG
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -111,6 +138,8 @@
             this.tpLexems.PerformLayout();
             this.tpTetrads.ResumeLayout(false);
             this.tpTetrads.PerformLayout();
+            this.tpAssembler.ResumeLayout(false);
+            this.tpAssembler.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -122,5 +151,7 @@
         private System.Windows.Forms.TextBox tbLexems;
         private System.Windows.Forms.TabPage tpTetrads;
         private System.Windows.Forms.TextBox tbTetradList;
+        private System.Windows.Forms.TabPage tpAssembler;
+        private System.Windows.Forms.TextBox tbAssemblerCode;
     }
 }
