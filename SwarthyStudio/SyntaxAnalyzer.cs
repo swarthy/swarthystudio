@@ -316,7 +316,7 @@ namespace SwarthyStudio
             dynPos = 0;
             Operand op2 = Sum();
             if (op2.Type==OperandType.Tetrad)
-                Convolution(prevTetradCount);
+                Convolution(prevTetradCount, op1.Variable);
             if (Peek.Type==TokenType.Delimitier)
                 Eat(TokenType.Delimitier);            
             TetradManager.Add(new Tetrad(OperationType.ASSIGN, op1.Clone(), op2.Clone()));
@@ -332,14 +332,14 @@ namespace SwarthyStudio
                 TetradManager.list.Remove(allocMemory);
         }
 
-        static void Convolution(int beginOfLinearArea)
+        static void Convolution(int beginOfLinearArea, Variable leftSide)
         {
             Tetrad t = TetradManager.list[beginOfLinearArea];
             while (t != null)
             {
                 if (t.Operand1 != null && t.Operand2 != null &&
-                    (t.Operand1.Type == OperandType.Constant || (t.Operand1.Type == OperandType.Variable && ConvolutionTable.ContainsKey(t.Operand1.Variable))) &&
-                    (t.Operand2.Type == OperandType.Constant || (t.Operand2.Type == OperandType.Variable && ConvolutionTable.ContainsKey(t.Operand2.Variable))))
+                    (t.Operand1.Type == OperandType.Constant || (t.Operand1.Type == OperandType.Variable && ConvolutionTable.ContainsKey(t.Operand1.Variable) && t.Operand1.Variable != leftSide)) &&
+                    (t.Operand2.Type == OperandType.Constant || (t.Operand2.Type == OperandType.Variable && ConvolutionTable.ContainsKey(t.Operand2.Variable) && t.Operand2.Variable != leftSide)))
                 {
                     int val1 = t.Operand1.Type == OperandType.Constant ? t.Operand1.Constant : ConvolutionTable[t.Operand1.Variable];
                     int val2 = t.Operand2.Type == OperandType.Constant ? t.Operand2.Constant : ConvolutionTable[t.Operand2.Variable];

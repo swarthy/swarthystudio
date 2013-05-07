@@ -292,7 +292,8 @@
             this.tbCode.Name = "tbCode";
             this.tbCode.Size = new System.Drawing.Size(533, 161);
             this.tbCode.TabIndex = 3;
-            this.tbCode.Text = "{\nb=5;\na=1+2+b+3+4+5;\n}\n";
+            this.tbCode.Text = "{\na=10;\nfor(i=0;b<a;i=i+1)\n{\nwrite(i);\nwrite(\" \");\nwrite(a);\nwriteln();\n}\nread();" +
+                "\n}\n\n";
             this.tbCode.SelectionChanged += new System.EventHandler(this.tbCode_SelectionChanged);
             this.tbCode.TextChanged += new System.EventHandler(this.tbCode_TextChanged);
             this.tbCode.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tbCode_KeyDown);
