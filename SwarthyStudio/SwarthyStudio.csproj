@@ -71,7 +71,6 @@
       <DependentUpon>AboutBox1.cs</DependentUpon>
     </Compile>
     <Compile Include="CodeGenerator.cs" />
-    <Compile Include="Compiler.cs" />
     <Compile Include="DEBUG.cs">
       <SubType>Form</SubType>
     </Compile>
