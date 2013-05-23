@@ -247,7 +247,7 @@ namespace SwarthyStudio
             return logic;
         }
         #endregion
-
+        #region Функции
         static Operand FunctionCall(Token fToken, params FunctionReturnType[] validReturnTypes)
         {
             sFunction func = null;
@@ -304,7 +304,7 @@ namespace SwarthyStudio
             }
             return parametres;            
         }
-
+        #endregion
         static void Assign()
         {            
             Operand op1 = new Operand(currentVisibility.FindOrCreate(Eat(TokenType.Identifier).Value));
@@ -384,7 +384,7 @@ namespace SwarthyStudio
                 t = TetradManager.Next(t);
             }
         }
-
+        #region Арифметические выражения
         static Operand Sum()
         {
             if (Peek.Value == "-")
@@ -453,7 +453,7 @@ namespace SwarthyStudio
             }
             return op;
         }
-        
+        #endregion
         static Variable DeclarationCheck(Token t)
         {
             Variable v = currentVisibility.Find(t.Value);
@@ -479,10 +479,7 @@ namespace SwarthyStudio
                 return t;
             }
         }
-        static void PutBack(Token t)
-        {
-            tokens.Insert(0, t);
-        }
+        
         static Token Eat(params TokenType[] types)
         {
             Token t = Get;            
@@ -493,15 +490,12 @@ namespace SwarthyStudio
     }
 
     class Visibility
-    {
-        public static Visibility GLOBAL = null;
+    {        
         public Visibility parentVisibility = null;
         public List<Variable> variables = new List<Variable>();
         public List<Visibility> subVisibilities = new List<Visibility>();
         public Visibility()
-        {
-            if (GLOBAL == null)
-                GLOBAL = this;
+        {            
             parentVisibility = SyntaxAnalyzer.currentVisibility;
             if (parentVisibility!=null)
                 parentVisibility.subVisibilities.Add(this);
