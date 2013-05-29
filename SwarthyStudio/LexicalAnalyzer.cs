@@ -105,6 +105,7 @@ namespace SwarthyStudio
                                     }
                 prev = c;
             }
+            postEvent(Events.EOS, '%', pos, line);
         }
         static void Refresh()
         {
@@ -134,6 +135,7 @@ namespace SwarthyStudio
             Transitions.Add(new Transition(States.Start, Events.newLine, States.Start, (c, pos, line) => { }));
             Transitions.Add(new Transition(States.Start, Events.Space, States.Start, (c, pos, line) => { }));
             Transitions.Add(new Transition(States.Start, Events.Comma, States.Start, (c, pos, line) => { AddToken(c, TokenType.Comma, TokenSubType.Equal, pos, line); }));
+            Transitions.Add(new Transition(States.Start, Events.EOS, States.Start, (c, pos, line) => { AddToken(c, TokenType.EOS, pos, line); }));
 
             Transitions.Add(new Transition(States.Identified, Events.Symbol, States.Identified, (c, pos, line) => { buffer += c; }));
             Transitions.Add(new Transition(States.Identified, Events.Delimiter, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.Identifier, TokenSubType.None, pos, line); AddToken(c, TokenType.Delimitier, pos, line); }));
@@ -171,6 +173,7 @@ namespace SwarthyStudio
             #endregion
 
             Transitions.Add(new Transition(States.StringConst, Events.newLine, States.Start, (c, pos, line) => { Err("Неверное определение для строковой константы", pos, line, ErrorType.LexicalError); }));
+            Transitions.Add(new Transition(States.StringConst, Events.EOS, States.Start, (c, pos, line) => { Err("Неверное определение для строковой константы", pos, line, ErrorType.LexicalError); }));
             Transitions.Add(new Transition(States.StringConst, Events.Quote, States.Start, (c, pos, line) => { AddToken(buffer, TokenType.StringConstant, TokenSubType.None, pos, line); AddToken(c, TokenType.Quote, TokenSubType.None, pos, line); }));
             Transitions.Add(new Transition(States.StringConst, Events.Any, States.StringConst, (c, pos, line) => { buffer += c; }));
 
@@ -358,7 +361,7 @@ namespace SwarthyStudio
         Add, Mul, Write, Read, None, Less, More, Equal, NotEqual, RomeNumber, HexNumber, DecNumber
     }
     enum TokenType
-    {
+    {        
         Identifier = 0,
         Number,
         StringConstant,

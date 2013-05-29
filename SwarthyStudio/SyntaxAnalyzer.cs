@@ -21,11 +21,15 @@ namespace SwarthyStudio
         public static void Process()
         {
             tokens = LexicalAnalyzer.Lexems.ToList();//DEBUG: копируем список, в release версии - передать по ссылке
+            if (tokens.First().Type == TokenType.EOS)
+                throw new ErrorException("Программа не содержит ни одной инструкции", ErrorType.LexicalError);
             currentVisibility = null;
             ConvolutionTable.Clear();
             Variables.Clear();
             TetradManager.list.Clear();
             Statement();
+            if (tokens.Count > 0 && Peek.Type != TokenType.EOS)
+                throw new ErrorException("Если программа содержит больше 1 инструкции, то они должны быть обернуты в {}", ErrorType.SyntaxError);
         }
         static Visibility Statement(Visibility exist = null)
         {

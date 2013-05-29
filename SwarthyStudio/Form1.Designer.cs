@@ -234,7 +234,9 @@
             // 
             // запускExeToolStripMenuItem
             // 
+            this.запускExeToolStripMenuItem.Checked = true;
             this.запускExeToolStripMenuItem.CheckOnClick = true;
+            this.запускExeToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.запускExeToolStripMenuItem.Name = "запускExeToolStripMenuItem";
             this.запускExeToolStripMenuItem.Size = new System.Drawing.Size(353, 22);
             this.запускExeToolStripMenuItem.Text = "Запускать .exe файл после успешной компиляции";
